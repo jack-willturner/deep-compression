@@ -43,7 +43,7 @@ def quantize(input_matrix, k_means):
     # 1. "k-means clustering" done as linear intervals
     # probably an opportunity for gain in better quantization - won't affect speed but maybe accuracy
     from sklearn import cluster
-    kmeans = cluster.KMeans(n_clusters=3, n_init=4).fit(input_matrix.reshape((-1,1)))
+    kmeans = cluster.KMeans(n_clusters=3, n_init=20).fit(input_matrix.reshape((-1,1)))
 
     # 2. Create codebook vector
     centroids = kmeans.cluster_centers_
@@ -67,9 +67,12 @@ def quantize(input_matrix, k_means):
 test = [[1,2,3],[4,5,6],[7,8,9]]
 test = np.array(test)
 
+print("Input matrix: ")
 print(test)
 print()
 indices, centroids = quantize(test, 3)
+print("Centroids: ")
 print(centroids)
 print()
+print("Index matrix:")
 print(indices)
