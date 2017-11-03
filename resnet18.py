@@ -15,6 +15,14 @@ import time
 import os
 
 
+'''
+Training and using ResNet-18 on CIFAR-10
+Done to learn PyTorch
+''''
+
+
+
+
 ''' Load CIFAR-10 training and validation sets'''
 
 train_transforms = transforms.Compose([
@@ -31,9 +39,6 @@ val_transforms = transforms.Compose([
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 
-#transform = transforms.Compose(
-#    [transforms.ToTensor(),
-#     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 trainset = datasets.CIFAR10(root='./data', train=True,
                                         download=True, transform=train_transforms)
