@@ -2,8 +2,9 @@ import numpy as np
 
 
 class DeepCompression(nn.Module):
-    def __init__(self, threshold=0.02):
+    def __init__(self, threshold=0.02, k_means=16):
         self.threshold = threshold
+        self.k_means   = k_means
 
     # returns the index of the closest centroid value
     def closest(input, centroids):
@@ -15,7 +16,7 @@ class DeepCompression(nn.Module):
             param = torch.gt((torch.abs(param)),self.threshold).float() # need to add "absolute"
         return model
 
-    def quantize(input_matrix, k_means):
+    def quantize(self, model):
         '''
             Quantization Process
         ___________________________
@@ -24,26 +25,32 @@ class DeepCompression(nn.Module):
         3. Iterate over the input matrix, putting the closest centroid index into the index matrix
 
         '''
-        # 1. Clustering.  Probably done better as linear intervals - since a pruned network
-        # will cluster heavily around 0
-        from sklearn import cluster
-        kmeans = cluster.KMeans(n_clusters=k_means, n_init=20).fit(input_matrix.reshape((-1,1)))
+        model_ = []
+        for param in model.parameters():
 
-        # 2. Create codebook vector
-        centroids = kmeans.cluster_centers_
+            # 1. Clustering.  Probably done better as linear intervals - since a pruned network
+            # will cluster heavily around 0
+            from sklearn import cluster
+            kmeans = cluster.KMeans(n_clusters=k_means, n_init=20).fit(param.reshape((-1,1)))
 
-        # 3. Create index matrix
-        index_matrix = np.ndarray(input_matrix.shape)
+            # 2. Create codebook vector
+            centroids = kmeans.cluster_centers_
 
-        # 4. Fill index matrix : TODO make this more numpy
-        vectorized_matrix = input_matrix.reshape(1,-1)[0]
+            # 3. Create index matrix
+            index_matrix = np.ndarray(param.shape)
 
-        for i,value in enumerate(vectorized_matrix):
-            vectorized_matrix[i] = closest(value, centroids)
+            # 4. Fill index matrix : TODO make this more numpy
+            vectorized_matrix = param.reshape(1,-1)[0]
 
-        index_matrix = vectorized_matrix.reshape(input_matrix.shape)
+            for i,value in enumerate(vectorized_matrix):
+                vectorized_matrix[i] = closest(value, centroids)
 
-        return (index_matrix, centroids)
+            index_matrix = vectorized_matrix.reshape(param.shape)
+
+            model_.append((param, centroids))
+
+        # need to reconstruct PyTorch module
+        return model_
 
     '''
         May not do this. Helps compress network size but not really relevant
