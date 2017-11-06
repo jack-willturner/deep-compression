@@ -24,6 +24,11 @@ class QuantizedSGD(SGD):
             loss = closure()
 
         for group in self.param_groups:
+            for param in group['params']
+                
+
+'''
+        for group in self.param_groups:
             weight_decay = group['weight_decay']
             momentum     = group['momentum']
             dampening    = group['dampening']
@@ -51,3 +56,4 @@ class QuantizedSGD(SGD):
                 p.data.add_(-group['lr'], d_p)
 
         return loss
+'''

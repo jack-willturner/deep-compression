@@ -1,4 +1,7 @@
+import torch
 import numpy as np
+import torch.nn as nn
+from sklearn import cluster
 
 
 class DeepCompression(nn.Module):
@@ -30,7 +33,6 @@ class DeepCompression(nn.Module):
 
             # 1. Clustering.  Probably done better as linear intervals - since a pruned network
             # will cluster heavily around 0
-            from sklearn import cluster
             kmeans = cluster.KMeans(n_clusters=k_means, n_init=20).fit(param.reshape((-1,1)))
 
             # 2. Create codebook vector
@@ -50,7 +52,8 @@ class DeepCompression(nn.Module):
             model_.append((param, centroids))
 
         # need to reconstruct PyTorch module
-        return model_
+
+        return QuantizedNN(model_)
 
     '''
         May not do this. Helps compress network size but not really relevant
@@ -61,21 +64,15 @@ class DeepCompression(nn.Module):
         return 0
 
     def compress(self, model):
+        # Prune and retrain
         model = prune(model)
-        model = quantize(model)
-        model = huffman_encode(model)
-        return model
+        model = retrain_pruned_model(model, num_epochs)
 
-    def quantize_test(self):
-        test = [[1,2,3],[4,5,6],[7,8,9]]
-        test = np.array(test)
+        # Quantize and retrain
+        model_ = quantize(model)
+        model_ = retrain_quantized_model(model, num_epochs)
 
-        print("Input matrix: ")
-        print(test)
-        print()
-        indices, centroids = quantize(test, 3)
-        print("Centroids: ")
-        print(centroids)
-        print()
-        print("Index matrix:")
-        print(indices)
+        # Huffman encode weight matrix
+        # model__ = huffman_encode(model_)
+        
+        return model_
