@@ -3,10 +3,8 @@ from torch.optim import SGD
 
 class QuantizedSGD(SGD):
     '''
-        Quantized version of stochastic gradient descent
-    '''
+        SGD for quantized neural networks
 
-    '''
     Performs a single optimization step, given a closure that re-evaluates the model
     and returns the loss (optional, probably not used here)
     '''
