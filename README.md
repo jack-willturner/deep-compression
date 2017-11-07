@@ -1,9 +1,9 @@
 # Deep Compression
 PyTorch Implementation of Deep Compression algorithm outlined here: https://arxiv.org/abs/1510.0014
 
-Please note that it is currently not working - this is mostly pseudocode soon to be converted into actual python/pyTorch.
+Please note that it is currently not working - this is mostly pseudocode soon to be converted into actual Python/PyTorch.
 
-Once it's all done I'll make a big ipython notebook explaining how the whole process works, for now the below overview will have to do
+Once it's all done I'll make a big iPython notebook explaining how the whole process works, for now the below overview will have to do.
 
 # General Overview
 In order to use this implementation of Deep Compression, your model will need to be implemented in PyTorch (for now - planning to extend/ write some NNVM bindings eventually) and subclass `torch.nn.Module`.
@@ -20,6 +20,6 @@ Finally, the network can be optionally compressed using huffman coding (I'll add
 - [x] extend SGD to be able to optimize with the quantized weights
 - [x] implement inference with quantized format
 - [ ] huffman coding
-- [ ] collate into usable modular sytem
+- [ ] collate into usable modular sytem/ script
 - [ ] write a notebook outlining what's happening/ how to replicate
 - [ ] try to replicate results from papers
