@@ -19,6 +19,30 @@ class DeepCompression(nn.Module):
             param = torch.gt((torch.abs(param)),self.threshold).float() # need to add "absolute"
         return model
 
+
+    def construct_layer(centroids, index_matrix):
+        for i in index_matrix:
+            for j in index_matrix:
+                index_matrix[i][j] = centroids[(index_matrix[i][j])]
+        return index_matrix
+
+    def construct_model(model, centroids, index_matrices):
+        '''
+        Given a model, a list of centroids and an index matrix,
+        replace all of the weights in the model with the centroids
+        using the index matrix
+
+        @param model: Anything that subclasses torch.nn.Module
+        @param centroids: A list of centroid vectors for each layer
+        @param index_matrices: A list of index matrices for each layer
+        '''
+
+        for idx, layer in model.parameters():
+            layer_ = construct_layer(centroids[idx], index_matrices[idx])
+            layer  = layer_ # does this work??
+        return model
+
+
     def quantize(self, model):
         '''
             Quantization Process
@@ -27,6 +51,11 @@ class DeepCompression(nn.Module):
         2. Create an index matrix
         3. Iterate over the input matrix, putting the closest centroid index into the index matrix
 
+        '''
+
+        '''
+        NOTE: Need to change k means to linear - not random - centroid initialisation
+            : Probably best to implement this with Tensors instead of using numpy
         '''
         model_ = []
         for param in model.parameters():
@@ -53,12 +82,11 @@ class DeepCompression(nn.Module):
 
         # need to reconstruct PyTorch module
 
-        return QuantizedNN(model_)
+        return model_
 
     '''
-        May not do this. Helps compress network size but not really relevant
-        to performance since I assume we decompress the model before running
-        inferences
+        Might not implement this. Helps compress network size but not really relevant
+        to performance since we decompress the model before running inferences
     '''
     def huffman_encode(self, model):
         return 0
@@ -70,9 +98,10 @@ class DeepCompression(nn.Module):
 
         # Quantize and retrain
         model_ = quantize(model)
+        model_ = construct_model(model, )
         model_ = retrain_quantized_model(model, num_epochs)
 
         # Huffman encode weight matrix
         # model__ = huffman_encode(model_)
-        
+
         return model_

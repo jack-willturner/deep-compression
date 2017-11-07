@@ -24,8 +24,36 @@ class QuantizedSGD(SGD):
             loss = closure()
 
         for group in self.param_groups:
-            for param in group['params']
-                
+            '''
+            For each layer in the model:
+                1. Construct a *new* gradient matrix n x m (where n = number of centroids, and m = maximum cluster size)
+                2. Iteratively add gradients to the matrix - row i represents gradients of all weights belonging to centroid[i]
+                3. Deltas = Sum each row and multiply by the learning rate
+                4. Substract deltas from centroids
+            '''
+            for idx, layer in enumerate(group['params'])
+
+             # 1. Represent matrix as a list of tuples (row_index, gradient) where row_index = centroid
+             centroid_grads = []
+
+             # 2. Iteratively add gradients
+             layer_indices = index_matrices[idx]
+             for i in layer_indices.width
+                for j in layer_indices.height
+                    centroid_grads.append( (layer_indices[i][j],grad_input[i][j]) )
+
+            # 3. Sum all the gradients for each centroid
+            grad_sums = []
+            for centroid in layer.centroids:
+                # get all the gradients for that centroid
+                all_centroid_gradients = list( filter( lambda (c,g): c == centroid, g))
+
+            # 4. Calculate deltas
+                delta    = sum(all_centroid_gradients) * learning_rate
+
+            # 5. Subtract delta from centroid
+                centroid = centroid - delta
+
 
 '''
         for group in self.param_groups:

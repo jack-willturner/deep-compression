@@ -52,7 +52,7 @@ class AlexNet(nn.Module):
         )
 
 
-        def f_prop(self, x) =
+        def forward(self, x) =
             x = self.features(x)
             x.view(x.size(0), 256 * 6 * 6)
             x = self.classifier(x)

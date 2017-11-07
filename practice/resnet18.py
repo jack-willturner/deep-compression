@@ -16,6 +16,7 @@ import os
 
 
 '''
+TRANSFER LEARNING TUTORIAL
 Training and using ResNet-18 on CIFAR-10
 Done to learn PyTorch
 ''''
