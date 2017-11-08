@@ -1,5 +1,5 @@
 # Deep Compression
-PyTorch Implementation of Deep Compression algorithm outlined here: https://arxiv.org/abs/1510.0014
+PyTorch Implementation of Deep Compression algorithm outlined here: https://arxiv.org/abs/1510.00149
 
 Please note that it is currently not working - this is mostly pseudocode soon to be converted into actual Python/PyTorch.
 
