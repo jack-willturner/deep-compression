@@ -87,10 +87,10 @@ def deep_compress():
             # train with 0.001
             best_acc = finetune(model_weights, best_acc, 30, 0.001)
 
-            new_model = compress_convs(model_weights, compressed_models[base_model_name])
+        new_model = compress_convs(model_weights, compressed_models[base_model_name])
 
-            # finetune again - this is just to save the model
-            finetune(new_model, 0., 10, 0.001)
+        # finetune again - this is just to save the model
+        finetune(new_model, 0., 10, 0.001)
 
 if args.train:
     train_models()

@@ -14,12 +14,12 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 
-from models.layers.bn import BatchNorm2dEx
-
 import torchvision
 import torchvision.transforms as transforms
 
 from torch.autograd import Variable
+
+import torch.optim as optim
 
 criterion = nn.CrossEntropyLoss()
 
@@ -53,54 +53,6 @@ def init_params(net):
                 init.constant(m.bias, 0)
 
 
-_, term_width = os.popen('stty size', 'r').read().split()
-term_width = int(term_width)
-
-TOTAL_BAR_LENGTH = 65.
-last_time = time.time()
-begin_time = last_time
-def progress_bar(current, total, msg=None):
-    global last_time, begin_time
-    if current == 0:
-        begin_time = time.time()  # Reset for new bar.
-
-    cur_len = int(TOTAL_BAR_LENGTH*current/total)
-    rest_len = int(TOTAL_BAR_LENGTH - cur_len) - 1
-
-    sys.stdout.write(' [')
-    for i in range(cur_len):
-        sys.stdout.write('=')
-    sys.stdout.write('>')
-    for i in range(rest_len):
-        sys.stdout.write('.')
-    sys.stdout.write(']')
-
-    cur_time = time.time()
-    step_time = cur_time - last_time
-    last_time = cur_time
-    tot_time = cur_time - begin_time
-
-    L = []
-    L.append('  Step: %s' % format_time(step_time))
-    L.append(' | Tot: %s' % format_time(tot_time))
-    if msg:
-        L.append(' | ' + msg)
-
-    msg = ''.join(L)
-    sys.stdout.write(msg)
-    for i in range(term_width-int(TOTAL_BAR_LENGTH)-len(msg)-3):
-        sys.stdout.write(' ')
-
-    # Go back to the center of the bar.
-    for i in range(term_width-int(TOTAL_BAR_LENGTH/2)+2):
-        sys.stdout.write('\b')
-    sys.stdout.write(' %d/%d ' % (current+1, total))
-
-    if current < total-1:
-        sys.stdout.write('\r')
-    else:
-        sys.stdout.write('\n')
-    sys.stdout.flush()
 
 def format_time(seconds):
     days = int(seconds / 3600/24)
@@ -170,19 +122,46 @@ def save_state(model_name, model_weights, acc):
     torch.save(state, 'saved_models/ckpt'+model_name+'.t7')
 
 def load_best(model_name, model_wts):
-    filename   = 'saved_models/ckpt_' + model_name + '.t7'
-    checkpoint = torch.load(filename)
+    filename   = 'saved_models/ckpt' + model_name + '.t7'
+
+    checkpoint = None
+
+    if torch.cuda.is_available():
+        checkpoint = torch.load(filename)
+    else:
+        checkpoint = torch.load(filename, map_location=lambda storage, loc: storage)
+
 
     best_acc = checkpoint['acc']
     print("Loading checkpoint with best_acc: ", best_acc)
 
+    '''
+    state_dict = checkpoint['model']
+
+    # create new OrderedDict that does not contain `module.`
+    from collections import OrderedDict
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        name = k[7:] # remove `module.`
+        new_state_dict[name] = v
+    # load params
+    model_wts.load_state_dict(new_state_dict)
+    '''
     state_dict = checkpoint['state_dict']
     model_wts.load_state_dict(state_dict)
 
     return model_name, model_wts, best_acc
 
+
+def finetune(model, model_name, best_acc, finetuning_epochs, train_loader, test_loader, lr):
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
+    for epoch in range(1, finetuning_epochs):
+        train(model, epoch, optimizer, trainloader=train_loader)
+        best_acc = test(model_name, model, epoch, test_loader, best_acc)
+    return best_acc
+
 # Training
-def train(model, epoch, writer, plot_name,  optimizer, bn_optimizer, trainloader, finetune=False):
+def train(model, epoch,  optimizer, trainloader):
     #model_name, model = model[0], model[1]
     use_cuda = torch.cuda.is_available()
 
@@ -203,8 +182,6 @@ def train(model, epoch, writer, plot_name,  optimizer, bn_optimizer, trainloader
             inputs, targets = inputs.cuda(), targets.cuda()
 
         optimizer.zero_grad()
-        if not finetune:
-            bn_optimizer.zero_grad()
 
         inputs, targets = Variable(inputs), Variable(targets)
         outputs = model(inputs)
@@ -214,24 +191,18 @@ def train(model, epoch, writer, plot_name,  optimizer, bn_optimizer, trainloader
 
         optimizer.step()
 
-        if not finetune:
-            bn_optimizer.step()
-
         train_loss  += loss.data[0]
         _, predicted = torch.max(outputs.data, 1)
         total       += targets.size(0)
         correct     += predicted.eq(targets.data).cpu().sum()
 
-        acc = 100.*correct/total
+    acc = 100.*correct/total
 
-        writer.add_scalar((plot_name + ": Train/Loss"), loss, epoch)
-        writer.add_scalar((plot_name + ": Train/Top1"), acc,  epoch)
+    print("     Accuracy: ", acc)
 
 
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-            % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
-def test(model_name, model, epoch, writer,plot_name, testloader, best_acc):
+def test(model_name, model, epoch, testloader, best_acc):
     use_cuda = torch.cuda.is_available()
 
     if use_cuda:
@@ -255,14 +226,8 @@ def test(model_name, model, epoch, writer,plot_name, testloader, best_acc):
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
 
-        progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-            % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
-
     # Save checkpoint.
     acc = 100.*correct/total
-
-    writer.add_scalar((plot_name + ": Val/Loss"), loss, epoch)
-    writer.add_scalar((plot_name + ": Val/Top1"), acc,  epoch)
 
     if acc > best_acc:
         print('Saving..')
@@ -280,36 +245,6 @@ def count_params(model):
         total = total + np.count_nonzero(flat)
     return total
 
-def count_sparse_bn(model, writer, epoch):
-    total = 0.
-
-    input_width  = 28.
-    input_height = 28.
-
-    ls = expand_model(model, []) # this seems like the most reasonable way to iterate
-
-
-    for l1, l2 in zip(ls, ls[1:]):
-        if isinstance(l1, nn.Conv2d) and isinstance(l2, BatchNorm2dEx):
-            num_nonzero = np.count_nonzero(l2.weight.data.cpu().numpy())
-
-            writer.add_scalar(str(l1), num_nonzero, epoch)
-            k_w, k_h = l1.kernel_size[0], l1.kernel_size[1]
-            padding_w, padding_h  = l1.padding[0], l1.padding[1]
-            stride = l1.stride[0]
-
-            mac_ops_per_kernel = (input_width + padding_w) * (input_height + padding_h) * k_w * k_h
-
-            input_height = (input_height - k_h + (2 * padding_h) / stride) + 1
-            input_width  = (input_width  - k_w + (2 * padding_w) / stride) + 1
-
-            mac_ops = mac_ops_per_kernel * num_nonzero
-            total  += mac_ops
-
-
-    writer.add_scalar("MAC ops", total, epoch)
-    return total
-
 import numpy as np
 
 def calculate_threshold(weights, ratio):
@@ -325,22 +260,6 @@ def sparsify(model, sparsity_level=50.):
             param.data = param.data * mask
     return model
 
-
-def sparsify_on_bn(model):
-    '''
-    Here we zero out whole planes where their batchnorm weight is 0
-    1. Consider lists in pairs
-    2. If conv followed by batchnorm - get nonzeros from batchnorm
-    3. Zero out whole conv filters
-    '''
-
-    for l1, l2 in zip(expand_model(model, []), expand_model(model, [])[1:]):
-        if isinstance(l1, nn.Conv2d) and isinstance(l2, BatchNorm2dEx):
-            zeros = argwhere_nonzero(l2.weight, batchnorm=True)
-            for z in zeros:
-                l1.weight.data[z] = 0.
-
-
 def argwhere_nonzero(layer, batchnorm=False):
     indices=[]
     # for batchnorms we want to do the opposite
@@ -354,6 +273,7 @@ def argwhere_nonzero(layer, batchnorm=False):
                 indices.append(idx)
 
     return indices
+
 
 def prune_conv(indices, layer, follow=False):
     # follow tells us whether we need to prune input channels or output channels
