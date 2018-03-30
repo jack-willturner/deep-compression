@@ -10,6 +10,6 @@ python deep_compress.py
 More detail coming soon.
 
 ## Results
-![Accuracy-Sparsity tradeoff](https://raw.githubusercontent.com/jack-willturner/DeepCompression-PyTorch/blob/master/results/accuracy_plot.pdf)  
+![](results/accuracy_plot.png)  
 
-![Inference time effects](https://raw.githubusercontent.com/jack-willturner/DeepCompression-PyTorch/blob/master/results/inftime_plot.pdf)
+![](results/inftime_plot.png)
