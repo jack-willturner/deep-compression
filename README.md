@@ -10,3 +10,5 @@ python deep_compress.py
 More detail coming soon.
 
 ## Results
+![](https://raw.githubusercontent.com/jack-willturner/DeepCompression-PyTorch/blob/master/results/accuracy_plot.pdf)
+![](https://raw.githubusercontent.com/jack-willturner/DeepCompression-PyTorch/blob/master/results/inftime_plot.pdf)
