@@ -12,4 +12,4 @@ More detail coming soon.
 ## Results
 ![](results/accuracy_plot.png)  
 
-![](results/inftime_plot.png)
+![](results/inf_time_plot.png)
