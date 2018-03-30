@@ -112,7 +112,7 @@ def save_state(model_name, model_weights, acc):
     print('==> Saving model ...')
     state = {
             'acc': acc,
-            'state_dict': model_weights.state_dict(),
+            'staite_dict': model_weights.state_dict(),
             }
     for key in list(state['state_dict'].keys()):
         if 'module' in key:
