@@ -9,7 +9,8 @@ python deep_compress.py
 
 More detail coming soon.
 
-## Results
+## Preliminary Results
+
 ![](results/accuracy_plot.png)  
 
 ![](results/inf_time_plot.png)
