@@ -14,25 +14,21 @@ import os
 import argparse
 
 from models import *
-from utils import progress_bar, load_best, get_data, train, test, sparsify, count_params
+from utils import *
 from torch.autograd import Variable
 
+import matplotlib.pyplot as plt
 global best_acc
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--deep-compress', '-d', default=False)
 parser.add_argument('--train', '-t', action='store_true')
+parser.add_argument('--prune', action='store_true')
 parser.add_argument('--model', '-m', default='', help='VGG-16, ResNet-18, LeNet')
 args = parser.parse_args()
 
 
-resnet18  = ('ResNet-18', ResNet18())
-mobilenet = ('MobiLeNet', MobileNet())
-vgg_16    = ('LeNet', LeNet())
-
-models = {'ResNet-18': ResNet18(), 'LeNet':LeNet(), 'VGG-16': VGG('VGG16')}
-compressed_models = {'ResNet-18': ResNet18Compressed, 'LeNet': LeNetCompressed, 'VGG-16': VGG('VGG16')}
 
 # If a specific model has been named, then we just want to do the operations on one model
 model_name = args.model
@@ -92,6 +88,73 @@ def deep_compress():
         # finetune again - this is just to save the model
         finetune(new_model, 0., 10, 0.001)
 
+
+
+
+def prune(model, compressed, dims):
+    layers = expand_model(model, [])
+    prunable_layers = []
+
+    for i,layer in enumerate(layers):
+        if isinstance(layer, Conv2D):
+            if layer.prunable:
+                prunable_layers.append(i)
+
+    ##### Get the number of channels at each layer
+    channels = []
+    for i, layer in enumerate(layers):
+        if i in prunable_layers:
+            c = compress_resnet_conv(i, layers, dims)
+            channels.append(c)
+        else:
+            if isinstance(layer, nn.Conv2d):
+                channels.append(layer.out_channels)
+
+    print(channels)
+
+    # Init the compressed model
+    compressed_model = compressed(channels)
+
+    ##### Transfer the weights from the original to the compressed model
+
+    for original, compressed in zip(layers, expand_model(compressed_model, [])):
+
+        classes_to_avoid = [nn.Sequential, nn.ReLU, nn.MaxPool2d]
+        has_weight = reduce((lambda b1, b2: b1 and b2), map(lambda c: not isinstance(original, c), classes_to_avoid))
+
+        if has_weight:
+            if original.weight is not None:
+                compressed.weight.data = original.weight.data
+            if original.bias is not None:
+                compressed.bias.data   = original.bias.data
+
+    return model
+
+def channel_prune(model, model_name):
+
+    # generate random input data to test models are the same
+    print("Pruning: ", model_name)
+    base_model_name = model_name
+    model_name, model_weights, best_acc = load_best(model_name+"90.0",model)
+
+    data = torch.rand(10,3,32,32)
+    data = Variable(data, requires_grad=False)
+
+    original_pred = model_weights(data)
+
+    dims          = compute_dims(model_weights)
+    compressed    = compressed_models[base_model_name]
+
+    pruned_model = prune(model_weights, compressed, dims)
+    new_pred     = pruned_model(data)
+
+    print("     Model accuracy the same: ", np.allclose(original_pred.data.cpu().numpy(), new_pred.data.cpu().numpy()))
+
+    return pruned_model
+
+
+
+
 if args.train:
     train_models()
 
@@ -102,3 +165,7 @@ if args.deep_compress:
 
     writer.export_scalars_to_json("./all_scalars.json")
     writer.close()
+
+if args.prune:
+    for model_name, model_weights in list(models.items()):
+        channel_prune(model_weights, model_name)
