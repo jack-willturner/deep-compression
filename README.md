@@ -1,10 +1,10 @@
-# A PyTorch implementation of [this paper](https://arxiv.org/abs/1506.02626)
+# [Learning both Weights and Connections for Efficient Neural Networks](https://arxiv.org/abs/1506.02626)
 
-Currently in code-cleanup mode and running experiments.
+A PyTorch implementation of [this paper](Learning both Weights and Connections for Efficient Neural Networks). 
 
 To run, try:
 ```
-python deep_compress.py
+python main.py --train --deep-compress
 ```
 
-More detail coming soon.
+Experimental results and notebook coming soon...
