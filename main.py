@@ -17,7 +17,7 @@ import argparse
 
 from models import *
 from utils import *
-from torch.autograd import Variable
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--train', '-t', action='store_true')
@@ -25,7 +25,8 @@ parser.add_argument('--prune',      action='store_true')
 parser.add_argument('--model',      default='resnet18', help='VGG-16, ResNet-18, LeNet')
 parser.add_argument('--data_loc',   default='./data', type=str)
 parser.add_argument('--checkpoint', default='resnet18', type=str)
-#parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
+parser.add_argument('--prune_checkpoint', default='resnet18_prune_', type=str)
+parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
 
 ### training specific args
 parser.add_argument('--epochs',     default=200, type=int)
@@ -37,12 +38,16 @@ parser.add_argument('--weight_decay', default=0.0005, type=float)
 
 args = parser.parse_args()
 
-#os.environ["CUDA_VISIBLE_DEVICES"]=args.GPU
+if torch.cuda.is_available():
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.GPU
+
 epoch_step = json.loads(args.epoch_step)
 global error_history
 
 if args.model == 'resnet18':
-    model = ResNet9()
+    model = ResNet18()
+    if torch.cuda.is_available():
+        model = model.cuda()
 
 trainloader, testloader = get_cifar_loaders(args.data_loc)
 optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
@@ -51,7 +56,17 @@ criterion = nn.CrossEntropyLoss()
 
 if args.train:
     error_history = []
-    for epoch in range(args.epochs):
+    for epoch in tqdm(range(args.epochs)):
         scheduler.step()
         train(model, trainloader, criterion, optimizer)
         validate(model, epoch, testloader, criterion, checkpoint=args.checkpoint)
+
+if args.prune:
+    save_every = 10
+    for prune_rate in tqdm(range(100)):
+        model.__prune__(prune_rate)
+        if prune_rate % save_every == 0:
+            checkpoint = args.prune_checkpoint + str(prune_rate)
+        for prunepoch in range(args.finetune_epochs):
+            train(model, trainloader, criterion, optimizer)
+            validate(model, prunepoch, testloader, criterion, checkpoint=checkpoint)
