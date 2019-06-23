@@ -24,7 +24,7 @@ class Shortcut(nn.Module):
 
     def __prune__(self, threshold):
         self.mode = 'prune'
-        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), t).float(), model.mask1)
+        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), threshold).float(), model.mask1)
 
     def __compress__(self):
         self.conv1.weight = torch.nn.Parameter(self.conv1.weight * self.mask1)
@@ -61,8 +61,8 @@ class BasicBlock(nn.Module):
 
     def __prune__(self, threshold):
         self.mode = 'prune'
-        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), t).float(), model.mask1)
-        self.mask2 = torch.mul(torch.gt(torch.abs(model.conv2.weight), t).float(), model.mask2)
+        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), threshold).float(), model.mask1)
+        self.mask2 = torch.mul(torch.gt(torch.abs(model.conv2.weight), threshold).float(), model.mask2)
 
         if isinstance(self.shortcut, Shortcut):
             self.shortcut.__prune__(threshold)
@@ -113,9 +113,9 @@ class Bottleneck(nn.Module):
 
     def __prune__(self, threshold):
         self.mode = 'prune'
-        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), t).float(), model.mask1)
-        self.mask2 = torch.mul(torch.gt(torch.abs(model.conv2.weight), t).float(), model.mask2)
-        self.mask3 = torch.mul(torch.gt(torch.abs(model.conv3.weight), t).float(), model.mask3)
+        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), threshold).float(), model.mask1)
+        self.mask2 = torch.mul(torch.gt(torch.abs(model.conv2.weight), threshold).float(), model.mask2)
+        self.mask3 = torch.mul(torch.gt(torch.abs(model.conv3.weight), threshold).float(), model.mask3)
 
         if isinstance(self.shortcut, Shortcut):
             self.shortcut.__prune__(threshold)
@@ -171,7 +171,7 @@ class ResNet(nn.Module):
 
     def __prune__(self, threshold):
         self.mode = 'prune'
-        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), t).float(), model.mask1)
+        self.mask1 = torch.mul(torch.gt(torch.abs(model.conv1.weight), threshold).float(), model.mask1)
         layers = [self.layer1, self.layer2, self.layer3, self.layer4]
         for layer in layers:
             for sub_block in layer:
