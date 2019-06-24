@@ -18,8 +18,7 @@ class Shortcut(nn.Module):
         self.bn1 = nn.BatchNorm2d(expansion*planes)
 
     def forward(self, x):
-        if self.mode == 'prune':
-            self.conv1.weight = nn.Parameter(self.conv1.weight *  self.mask1)
+        self.conv1.weight.data = torch.mul(self.conv1.weight,  self.mask1)
         return self.bn1(self.conv1(x))
 
     def __prune__(self, threshold):
@@ -29,7 +28,7 @@ class Shortcut(nn.Module):
     def __compress__(self):
         self.conv1.weight = nn.Parameter(self.conv1.weight * self.mask1)
         self.mode = 'deploy'
-        del self.mask1
+        #del self.mask1
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -49,9 +48,8 @@ class BasicBlock(nn.Module):
             self.shortcut = Shortcut(in_planes, planes, self.expansion, kernel_size=1, stride=stride, bias=False)
 
     def forward(self, x):
-        if self.mode == 'prune':
-            self.conv1.weight = nn.Parameter(self.conv1.weight *  self.mask1)
-            self.conv2.weight = nn.Parameter(self.conv2.weight *  self.mask2)
+        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1)
+        self.conv2.weight.data = torch.mul(self.conv2.weight, self.mask2)
 
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
@@ -68,15 +66,15 @@ class BasicBlock(nn.Module):
             self.shortcut.__prune__(threshold)
 
     def __compress__(self):
-        self.conv1.weight = nn.Parameter(self.conv1.weight * self.mask1)
-        self.conv2.weight = nn.Parameter(self.conv2.weight * self.mask2)
+        self.conv1.weight = nn.Parameter(self.conv1.weight * self.mask1, requires_grad=False)
+        self.conv2.weight = nn.Parameter(self.conv2.weight * self.mask2, requires_grad=False)
 
         if isinstance(self.shortcut, Shortcut):
             self.shortcut.__compress__()
 
         self.mode = 'deploy'
-        del self.mask1
-        del self.mask2
+        #del self.mask1
+        #del self.mask2
 
 class Bottleneck(nn.Module):
     expansion = 4
@@ -100,10 +98,9 @@ class Bottleneck(nn.Module):
             self.shortcut = Shortcut(in_planes, planes, self.expansion, kernel_size=1, stride=stride, bias=False)
 
     def forward(self, x):
-        if self.mode == 'prune':
-            self.conv1.weight = nn.Parameter(self.conv1.weight *  self.mask1)
-            self.conv2.weight = nn.Parameter(self.conv2.weight *  self.mask2)
-            self.conv3.weight = nn.Parameter(self.conv3.weight *  self.mask3)
+        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1)
+        self.conv2.weight.data = torch.mul(self.conv2.weight, self.mask2)
+        self.conv3.weight.data = torch.mul(self.conv3.weight, self.mask3)
 
         out = F.relu(self.bn1(self.conv1(x)))
         out = F.relu(self.bn2(self.conv2(out)))
@@ -122,17 +119,17 @@ class Bottleneck(nn.Module):
             self.shortcut.__prune__(threshold)
 
     def __compress__(self):
-        self.conv1.weight = nn.Parameter(self.conv1.weight * self.mask1)
-        self.conv2.weight = nn.Parameter(self.conv2.weight * self.mask2)
-        self.conv3.weight = nn.Parameter(self.conv3.weight * self.mask3)
+        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1)
+        self.conv2.weight.data = torch.mul(self.conv2.weight, self.mask2)
+        self.conv3.weight.data = torch.mul(self.conv3.weight, self.mask3)
 
         if isinstance(self.shortcut, Shortcut):
             self.shortcut.__compress__()
 
         self.mode = 'deploy'
-        del self.mask1
-        del self.mask2
-        del self.mask3
+        #del self.mask1
+        #del self.mask2
+        #del self.mask3
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, mode='train'):
@@ -157,8 +154,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        if self.mode == 'prune':
-            self.conv1.weight = nn.Parameter(self.conv1.weight *  self.mask1)
+        self.conv1.weight.data = torch.mul(self.conv1.weight,  self.mask1)
 
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
@@ -179,9 +175,9 @@ class ResNet(nn.Module):
                 sub_block.__prune__(threshold)
 
     def __compress__(self):
-        self.conv1.weight = torch.nn.Parameter(self.conv1.weight * self.mask1)
+        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1)
         self.mode = 'deploy'
-        del self.mask1
+        #del self.mask1
 
         layers = [self.layer1, self.layer2, self.layer3, self.layer4]
         for layer in layers:

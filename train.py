@@ -19,7 +19,7 @@ from tqdm   import tqdm
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--model',      default='resnet18', help='VGG-16, ResNet-18, LeNet')
-parser.add_argument('--data_loc',   default='./data', type=str)
+parser.add_argument('--data_loc',   default='/disk/scratch/datasets/cifar', type=str)
 parser.add_argument('--checkpoint', default='resnet18', type=str)
 parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
 

@@ -15,7 +15,7 @@ from tqdm   import tqdm
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--model',      default='resnet18', help='VGG-16, ResNet-18, LeNet')
-parser.add_argument('--data_loc',   default='./data', type=str)
+parser.add_argument('--data_loc',   default='/disk/scratch/datasets/cifar', type=str)
 parser.add_argument('--checkpoint', default='resnet18', type=str, help='Pretrained model to start from')
 parser.add_argument('--prune_checkpoint', default='resnet18_l1_', type=str, help='Where to save pruned models')
 parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
@@ -40,6 +40,8 @@ if args.model == 'resnet18':
     model = ResNet18()
 elif args.model =='resnet50':
     model = ResNet50()
+
+model = load_model(model, args.checkpoint)
 
 if torch.cuda.is_available():
     model = model.cuda()

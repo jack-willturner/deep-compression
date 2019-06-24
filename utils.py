@@ -49,6 +49,11 @@ def get_cifar_loaders(data_loc='./data', batch_size=128):
 
     return trainloader, testloader
 
+def load_model(model, sd):
+    sd = torch.load('checkpoints/%s.t7' % sd, map_location='cpu')
+    model.load_state_dict(new_sd)
+    return model
+
 def get_error(output, target, topk=(1,)):
     """Computes the error@k for the specified values of k"""
     maxk = max(topk)
@@ -118,6 +123,11 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
 
     error_history.append(top1.avg)
     if checkpoint:
+        try:
+            model.__compress__()
+        except:
+            model.module.__compress__()
+            
         state = {
             'net': model.state_dict(),
             'epoch': epoch,
