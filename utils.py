@@ -7,6 +7,8 @@ import torchvision.transforms as transforms
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+global error_history
+error_history = []
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -103,8 +105,6 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
     # switch to evaluate mode
     model.eval()
 
-    end = time.time()
-
     for i, (input, target) in enumerate(valloader):
         input, target = input.to(device), target.to(device)
         # compute output
@@ -119,7 +119,7 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
     error_history.append(top1.avg)
     if checkpoint:
         state = {
-            'net': net.state_dict(),
+            'net': model.state_dict(),
             'epoch': epoch,
             'error_history': error_history,
         }
