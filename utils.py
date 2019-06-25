@@ -123,13 +123,10 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
 
     error_history.append(top1.avg)
     if checkpoint:
-        try:
-            model.__compress__()
-        except:
-            model.module.__compress__()
-            
+
         state = {
             'net': model.state_dict(),
+            'masks': [w for name, w in model.named_parameters() if 'mask' in name],
             'epoch': epoch,
             'error_history': error_history,
         }

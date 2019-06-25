@@ -49,7 +49,7 @@ if torch.cuda.is_available():
         model = nn.DataParallel(model)
 
 trainloader, testloader = get_cifar_loaders(args.data_loc)
-optimizer = optim.SGD([v for v in model.parameters() if v.requires_grad], lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+optimizer = optim.SGD([w for name, w in model.named_parameters() if not 'mask' in name], lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
 scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=epoch_step, gamma=args.lr_decay_ratio)
 criterion = nn.CrossEntropyLoss()
 
@@ -59,4 +59,4 @@ for epoch in tqdm(range(args.epochs)):
     train(model, trainloader, criterion, optimizer)
     validate(model, epoch, testloader, criterion, checkpoint=args.checkpoint)
 
-print('FINAL ERR: ', error_history[-1])
+print('FINAL ERR: ', error_history[:-1])
