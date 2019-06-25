@@ -71,13 +71,16 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.mode = mode
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
-        self.mask1 = nn.Parameter(torch.ones(self.conv1.weight.size()), requires_grad=False)
+        self.mask1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
+        self.mask1.weight.data = torch.ones(self.mask1.weight.size())
         self.bn1   = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
-        self.mask2 = nn.Parameter(torch.ones(self.conv2.weight.size()), requires_grad=False)
+        self.mask2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.mask2.weight.data = torch.ones(self.mask2.weight.size())
         self.bn2   = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, self.expansion*planes, kernel_size=1, bias=False)
-        self.mask3 = nn.Parameter(torch.ones(self.conv3.weight.size()), requires_grad=False)
+        self.mask3 = nn.Conv2d(planes, self.expansion*planes, kernel_size=1, bias=False)
+        self.mask3.weight.data = torch.ones(self.mask3.weight.size())
         self.bn3   = nn.BatchNorm2d(self.expansion*planes)
 
         self.shortcut = nn.Sequential()
@@ -86,9 +89,9 @@ class Bottleneck(nn.Module):
             self.shortcut = Shortcut(in_planes, planes, self.expansion, kernel_size=1, stride=stride, bias=False)
 
     def forward(self, x):
-        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1)
-        self.conv2.weight.data = torch.mul(self.conv2.weight, self.mask2)
-        self.conv3.weight.data = torch.mul(self.conv3.weight, self.mask3)
+        self.conv1.weight.data = torch.mul(self.conv1.weight,  self.mask1.weight)
+        self.conv2.weight.data = torch.mul(self.conv2.weight,  self.mask2.weight)
+        self.conv3.weight.data = torch.mul(self.conv3.weight,  self.mask3.weight)
 
         out = F.relu(self.bn1(self.conv1(x)))
         out = F.relu(self.bn2(self.conv2(out)))
@@ -99,22 +102,12 @@ class Bottleneck(nn.Module):
 
     def __prune__(self, threshold):
         self.mode = 'prune'
-        self.mask1 = nn.Parameter(torch.mul(torch.gt(torch.abs(self.conv1.weight), threshold).float(), self.mask1), requires_grad=False)
-        self.mask2 = nn.Parameter(torch.mul(torch.gt(torch.abs(self.conv2.weight), threshold).float(), self.mask2), requires_grad=False)
-        self.mask3 = nn.Parameter(torch.mul(torch.gt(torch.abs(self.conv3.weight), threshold).float(), self.mask3), required_grad=False)
+        self.mask1.weight.data = torch.mul(torch.gt(torch.abs(self.conv1.weight), threshold).float(), self.mask1.weight)
+        self.mask2.weight.data = torch.mul(torch.gt(torch.abs(self.conv2.weight), threshold).float(), self.mask2.weight)
+        self.mask3.weight.data = torch.mul(torch.gt(torch.abs(self.conv3.weight), threshold).float(), self.mask3.weight)
 
         if isinstance(self.shortcut, Shortcut):
             self.shortcut.__prune__(threshold)
-
-    def __compress__(self):
-        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1)
-        self.conv2.weight.data = torch.mul(self.conv2.weight, self.mask2)
-        self.conv3.weight.data = torch.mul(self.conv3.weight, self.mask3)
-
-        if isinstance(self.shortcut, Shortcut):
-            self.shortcut.__compress__()
-
-        self.mode = 'deploy'
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10, mode='train'):
