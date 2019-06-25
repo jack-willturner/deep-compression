@@ -32,6 +32,7 @@ parser.add_argument('--weight_decay', default=0.0005, type=float)
 
 args = parser.parse_args()
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
     os.environ["CUDA_VISIBLE_DEVICES"]=args.GPU
 
@@ -47,6 +48,7 @@ if torch.cuda.is_available():
     model = model.cuda()
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
+model.to(device)
 
 trainloader, testloader = get_cifar_loaders(args.data_loc)
 optimizer = optim.SGD([w for name, w in model.named_parameters() if not 'mask' in name], lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
@@ -58,5 +60,3 @@ for epoch in tqdm(range(args.epochs)):
     scheduler.step()
     train(model, trainloader, criterion, optimizer)
     validate(model, epoch, testloader, criterion, checkpoint=args.checkpoint)
-
-print('FINAL ERR: ', error_history[:-1])

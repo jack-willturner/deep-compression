@@ -51,6 +51,14 @@ def get_cifar_loaders(data_loc='./data', batch_size=128):
 
 def load_model(model, sd):
     sd = torch.load('checkpoints/%s.t7' % sd, map_location='cpu')
+    new_sd = model.state_dict()
+    old_sd = sd['net']
+    new_names = [v for v in new_sd]
+    old_names = [v for v in old_sd]
+    for i, j in enumerate(new_names):
+        if not 'mask' in j:
+            new_sd[j] = old_sd[old_names[i]]
+
     model.load_state_dict(new_sd)
     return model
 
@@ -132,20 +140,50 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
         }
         torch.save(state, 'checkpoints/%s.t7' % checkpoint)
 
+def finetune(model, trainloader, criterion, optimizer, steps=100):
+    # switch to train mode
+    model.train()
+    dataiter = iter(trainloader)
+    for i in range(steps):
+        try:
+            input, target = dataiter.next()
+        except StopIteration:
+            dataiter = iter(trainloader)
+            input, target = dataiter.next()
+
+        input, target = input.to(device), target.to(device)
+
+        # compute output
+        output = model(input)
+        loss = criterion(output, target)
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
 def expand_model(model, layers=torch.Tensor()):
     for layer in model.children():
          if len(list(layer.children())) > 0:
-             expand_model(layer, layers)
+             layers = expand_model(layer, layers)
          else:
-             if isinstance(layer, nn.Conv2d):
-                 layers = torch.cat((layers, layer.weight.view(-1)))
+             if isinstance(layer, nn.Conv2d) and 'mask' not in layer._get_name():
+                 layers = torch.cat((layers.view(-1), layer.weight.view(-1)))
     return layers
 
 def calculate_threshold(model, rate):
-    weights = torch.abs(expand_model(model))
-    return np.percentile(weights.detach().numpy(), rate)
+    empty = torch.Tensor()
+    if torch.cuda.is_available():
+        empty.cuda()
+    pre_abs = expand_model(model, empty)
+    weights = torch.abs(pre_abs)
 
-def sparsify(model, sparsity_level=50.):
-    threshold = calculate_threshold(model, sparsity_level)
-    model.__prune__(threshold)
+    return np.percentile(weights.detach().cpu().numpy(), rate)
+
+def sparsify(model, prune_rate=50.):
+    threshold = calculate_threshold(model, prune_rate)
+    try:
+        model.__prune__(threshold)
+    except:
+        model.module.__prune__(threshold)
     return model

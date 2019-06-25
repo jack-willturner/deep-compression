@@ -22,8 +22,8 @@ parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
 parser.add_argument('--save_every', default=5, type=int, help='How often to save checkpoints in number of prunes (e.g. 10 = every 10 prunes)')
 
 ### training specific args
-parser.add_argument('--finetune_epochs',default=3) # this should really be done in minibatches rather than epochs
-parser.add_argument('--lr',             default=0.008)
+parser.add_argument('--finetune_steps', default=100)
+parser.add_argument('--lr',             default=0.004)
 parser.add_argument('--lr_decay_ratio', default=0.2, type=float, help='learning rate decay')
 parser.add_argument('--weight_decay', default=0.0005, type=float)
 
@@ -50,21 +50,18 @@ if torch.cuda.is_available():
 model.to(device)
 
 trainloader, testloader = get_cifar_loaders(args.data_loc)
-optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+optimizer = optim.SGD([w for name, w in model.named_parameters() if not 'mask' in name], lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
 criterion = nn.CrossEntropyLoss()
 
 for prune_rate in tqdm(range(100)):
-    if torch.cuda.device_count() > 1:
-        model.module.__prune__(prune_rate)
-    else:
-        model.__prune__(prune_rate)
+    model = sparsify(model, prune_rate, device)
 
     if prune_rate % args.save_every == 0:
         checkpoint = args.prune_checkpoint + str(prune_rate)
     else:
         checkpoint = None # don't bother saving anything
 
-    for prunepoch in range(args.finetune_epochs):
-        train(model, trainloader, criterion, optimizer)
-        if checkpoint:
-            validate(model, prunepoch, testloader, criterion, checkpoint=checkpoint)
+    finetune(model, trainloader, criterion, optimizer, args.finetune_steps)
+
+    if checkpoint:
+        validate(model, prune_rate, testloader, criterion, checkpoint=checkpoint)
