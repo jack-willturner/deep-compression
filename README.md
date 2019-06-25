@@ -12,4 +12,4 @@ python prune.py
 
 Preliminary results on ResNet-18 look reasonable:
 
-![alt text]('resnet-18.png')
+![alt text](./resnet-18.png)
