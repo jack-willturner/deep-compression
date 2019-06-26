@@ -174,7 +174,7 @@ def expand_model(model, layers=torch.Tensor()):
 def calculate_threshold(model, rate):
     empty = torch.Tensor()
     if torch.cuda.is_available():
-        empty.cuda()
+        empty = empty.cuda()
     pre_abs = expand_model(model, empty)
     weights = torch.abs(pre_abs)
 

@@ -39,10 +39,13 @@ if torch.cuda.is_available():
 epoch_step = json.loads(args.epoch_step)
 global error_history
 
-if args.model == 'resnet18':
-    model = ResNet18()
-elif args.model =='resnet50':
-    model = ResNet50()
+models = {'resnet9'  : ResNet9,
+          'resnet18' : ResNet18,
+          'resnet34' : ResNet34,
+          'resnet50' : ResNet50}
+
+
+model = models[args.model]()
 
 if torch.cuda.is_available():
     model = model.cuda()
