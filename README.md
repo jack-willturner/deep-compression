@@ -12,7 +12,7 @@ python prune.py --model='resnet34' --checkpoint='resnet34'
 
 ## Summary
 
-Given a family of ResNets, we can construct a Pareto frontier of the tradeoff betwene accuracy and number of parameters:
+Given a family of ResNets, we can construct a Pareto frontier of the tradeoff between accuracy and number of parameters:
 
 ![alt text](./resources/resnets.png)
 
