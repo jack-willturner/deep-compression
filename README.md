@@ -6,10 +6,16 @@ I'm currently in the process of updating this to work with the latest version of
 
 To run, try:
 ```bash
-python train.py
-python prune.py
+python train.py --model='resnet34' --checkpoint='resnet34'
+python prune.py --model='resnet34' --checkpoint='resnet34'
 ```
 
-Preliminary results on ResNet-18 look reasonable:
+## Summary
 
-![alt text](./resources/resnet-18.png)
+Given a family of ResNets, we can construct a Pareto frontier of the tradeoff betwene accuracy and number of parameters:
+
+![alt text](./resources/resnets.png)
+
+Han et al. posit that we can beat this Pareto frontier by leaving network structures fixed, but removing individual parameters:
+
+![alt text](./resources/pareto.png)
