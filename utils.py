@@ -77,6 +77,16 @@ def get_error(output, target, topk=(1,)):
         res.append(100.0 - correct_k.mul_(100.0 / batch_size))
     return res
 
+# count only conv params for now
+def get_no_params(net, verbose=False, mask=False):
+    params = net
+    tot = 0
+    for p in params:
+        no = torch.sum(params[p]!=0)
+        if 'conv' in p:
+            tot += no
+    return tot
+
 def train(model, trainloader, criterion, optimizer):
     batch_time = AverageMeter()
     data_time  = AverageMeter()

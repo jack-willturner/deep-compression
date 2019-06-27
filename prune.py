@@ -48,7 +48,7 @@ model = load_model(model, args.checkpoint)
 if args.prune_checkpoint == '':
     prune_checkpoint = args.checkpoint + '_l1_'
 else:
-    prune_checkpoint = args.prune_checkpointw
+    prune_checkpoint = args.prune_checkpoint
 
 if torch.cuda.is_available():
     model = model.cuda()
