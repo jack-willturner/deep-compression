@@ -18,7 +18,7 @@ from utils  import *
 from tqdm   import tqdm
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--model',      default='resnet18', help='VGG-16, ResNet-18, LeNet')
+parser.add_argument('--model',      default='resnet18', help='resnet9/18/34/50, wideresnet')
 parser.add_argument('--data_loc',   default='/disk/scratch/datasets/cifar', type=str)
 parser.add_argument('--checkpoint', default='resnet18', type=str)
 parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
@@ -39,13 +39,15 @@ if torch.cuda.is_available():
 epoch_step = json.loads(args.epoch_step)
 global error_history
 
-models = {'resnet9'  : ResNet9,
-          'resnet18' : ResNet18,
-          'resnet34' : ResNet34,
-          'resnet50' : ResNet50}
+models = {'resnet9'  : ResNet9(),
+          'resnet18' : ResNet18(),
+          'resnet34' : ResNet34(),
+          'resnet50' : ResNet50(),
+          'wrn_40_2' : WideResNet(40, 2),
+          'wrn_16_2' : WideResNet(16, 2),
+          'wrn_40_1' : WideResNet(40, 1)}
 
-
-model = models[args.model]()
+model = models[args.model]
 
 if torch.cuda.is_available():
     model = model.cuda()
