@@ -35,19 +35,20 @@ class BasicBlock(nn.Module):
         self.mask2.weight.data = torch.ones(self.mask2.weight.size())
         self.shortcut = nn.Sequential()
 
-        if stride != 1 or in_planes != self.expansion*planes:
-            self.shortcut = Shortcut(in_planes, planes, self.expansion, kernel_size=1, stride=stride, bias=False)
+        self.equalInOut = (in_planes == planes)
+        self.shortcut = (not self.equalInOut) and Shortcut(in_planes, planes, self.expansion, kernel_size=1, stride=stride, bias=False) or None
 
     def forward(self, x):
         self.conv1.weight.data = torch.mul(self.conv1.weight,  self.mask1.weight)
         self.conv2.weight.data = torch.mul(self.conv2.weight,  self.mask2.weight)
 
-        x = F.relu(self.bn1(x))
-        out = self.conv1(x)
-        out = self.conv2(F.relu(self.bn2(x)))
-        out += self.shortcut(x)
-        out = F.relu(out)
-        return out
+        if not self.equalInOut:
+            x = F.relu(self.bn1(x))
+        else:
+            out = F.relu(self.bn1(x))
+
+        out = self.conv2(F.relu(self.bn2(self.conv1(out if self.equalInOut else x))))
+        return torch.add(x if self.equalInOut else self.shortcut(x), out)
 
     def __prune__(self, threshold):
         self.mode = 'prune'
