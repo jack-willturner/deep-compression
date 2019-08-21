@@ -35,15 +35,16 @@ if torch.cuda.is_available():
 global error_history
 error_history = []
 
-
-models = {'resnet9'  : ResNet9,
-          'resnet18' : ResNet18,
-          'resnet34' : ResNet34,
-          'resnet50' : ResNet50}
-
+models = {'resnet9'  : ResNet9(),
+          'resnet18' : ResNet18(),
+          'resnet34' : ResNet34(),
+          'resnet50' : ResNet50(),
+          'wrn_40_2' : WideResNet(40, 2),
+          'wrn_16_2' : WideResNet(16, 2),
+          'wrn_40_1' : WideResNet(40, 1)}
 
 model = models[args.model]()
-model = load_model(model, args.checkpoint)
+model, sd = load_model(model, args.checkpoint)
 
 if args.prune_checkpoint == '':
     prune_checkpoint = args.checkpoint + '_l1_'
@@ -59,6 +60,13 @@ model.to(device)
 trainloader, testloader = get_cifar_loaders(args.data_loc)
 optimizer = optim.SGD([w for name, w in model.named_parameters() if not 'mask' in name], lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
 criterion = nn.CrossEntropyLoss()
+
+# set the learning rate to be 1/8th of final LR
+scheduler = lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1e-10)
+for epoch in range(sd['epoch']):
+    scheduler.step()
+for group in optim.param_groups:
+    group['lr'] = scheduler.get_lr() / 8
 
 for prune_rate in tqdm(range(100)):
     model = sparsify(model, prune_rate)
