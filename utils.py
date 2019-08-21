@@ -51,15 +51,23 @@ def get_cifar_loaders(data_loc='./disk/scratch/datasets/cifar10/', batch_size=12
 
     return trainloader, testloader
 
-def load_model(model, sd):
+def load_model(model, sd, old_format=False):
     sd = torch.load('checkpoints/%s.t7' % sd, map_location='cpu')
     new_sd = model.state_dict()
     old_sd = sd['net']
-    new_names = [v for v in new_sd]
-    old_names = [v for v in old_sd]
-    for i, j in enumerate(new_names):
-        if not 'mask' in j:
-            new_sd[j] = old_sd[old_names[i]]
+
+    if old_format:
+        # this means the sd we are trying to load does not have masks
+        # and/or is named incorrectly
+        keys_without_masks = [k for k in new_sd.keys() if 'mask' not in k]
+        for old_k, new_k in zip(old_sd.keys(), keys_without_masks):
+            new_sd[new_k] = old_sd[old_k]
+    else:
+        new_names = [v for v in new_sd]
+        old_names = [v for v in old_sd]
+        for i, j in enumerate(new_names):
+            if not 'mask' in j:
+                new_sd[j] = old_sd[old_names[i]]
 
     model.load_state_dict(new_sd)
     return model, sd
@@ -199,3 +207,43 @@ def sparsify(model, prune_rate=50.):
     except:
         model.module.__prune__(threshold)
     return model
+
+
+class Cutout(object):
+    """Randomly mask out one or more patches from an image.
+    Args:
+        n_holes (int): Number of patches to cut out of each image.
+        length (int): The length (in pixels) of each square patch.
+    """
+    def __init__(self, n_holes, length):
+        self.n_holes = n_holes
+        self.length = length
+
+    def __call__(self, img):
+        """
+        Args:
+            img (Tensor): Tensor image of size (C, H, W).
+        Returns:
+            Tensor: Image with n_holes of dimension length x length cut out of it.
+        """
+        h = img.size(1)
+        w = img.size(2)
+
+        mask = np.ones((h, w), np.float32)
+
+        for n in range(self.n_holes):
+            y = np.random.randint(h)
+            x = np.random.randint(w)
+
+            y1 = np.clip(y - self.length // 2, 0, h)
+            y2 = np.clip(y + self.length // 2, 0, h)
+            x1 = np.clip(x - self.length // 2, 0, w)
+            x2 = np.clip(x + self.length // 2, 0, w)
+
+            mask[y1: y2, x1: x2] = 0.
+
+        mask = torch.from_numpy(mask)
+        mask = mask.expand_as(img)
+        img = img * mask
+
+        return img

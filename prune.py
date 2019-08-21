@@ -20,6 +20,7 @@ parser.add_argument('--checkpoint', default='resnet18', type=str, help='Pretrain
 parser.add_argument('--prune_checkpoint', default='', type=str, help='Where to save pruned models')
 parser.add_argument('--GPU', default='0,1', type=str,help='GPU to use')
 parser.add_argument('--save_every', default=5, type=int, help='How often to save checkpoints in number of prunes (e.g. 10 = every 10 prunes)')
+parser.add_argument('--cutout', action='store_true')
 
 ### training specific args
 parser.add_argument('--finetune_steps', default=100)
@@ -43,8 +44,13 @@ models = {'resnet9'  : ResNet9(),
           'wrn_16_2' : WideResNet(16, 2),
           'wrn_40_1' : WideResNet(40, 1)}
 
-model = models[args.model]()
-model, sd = load_model(model, args.checkpoint)
+model = models[args.model]
+
+old_format=False
+if 'wrn' in args.model:
+    old_format=True
+
+model, sd = load_model(model, args.checkpoint, old_format)
 
 if args.prune_checkpoint == '':
     prune_checkpoint = args.checkpoint + '_l1_'
@@ -57,16 +63,16 @@ if torch.cuda.is_available():
         model = nn.DataParallel(model)
 model.to(device)
 
-trainloader, testloader = get_cifar_loaders(args.data_loc)
+trainloader, testloader = get_cifar_loaders(args.data_loc, cutout=args.cutout)
 optimizer = optim.SGD([w for name, w in model.named_parameters() if not 'mask' in name], lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
 criterion = nn.CrossEntropyLoss()
 
 # set the learning rate to be 1/8th of final LR
-scheduler = lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1e-10)
+scheduler = lr_scheduler.CosineAnnealingLR(optimizer, 200, eta_min=1e-10)
 for epoch in range(sd['epoch']):
     scheduler.step()
-for group in optim.param_groups:
-    group['lr'] = scheduler.get_lr() / 8
+for group in optimizer.param_groups:
+    group['lr'] = scheduler.get_lr()[0]
 
 for prune_rate in tqdm(range(100)):
     model = sparsify(model, prune_rate)

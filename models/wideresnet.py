@@ -72,9 +72,9 @@ class WideResNet(nn.Module):
         self.conv1  = nn.Conv2d(3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.mask1  = nn.Conv2d(3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.mask1.weight.data = torch.ones(self.mask1.weight.size())
-        self.layer1 = self._make_layer(n, nChannels[0], nChannels[1], stride=1)
-        self.layer2 = self._make_layer(n, nChannels[1], nChannels[2], stride=2)
-        self.layer3 = self._make_layer(n, nChannels[2], nChannels[3], stride=2)
+        self.block1 = self._make_layer(n, nChannels[0], nChannels[1], stride=1)
+        self.block2 = self._make_layer(n, nChannels[1], nChannels[2], stride=2)
+        self.block3 = self._make_layer(n, nChannels[2], nChannels[3], stride=2)
         self.bn1    = nn.BatchNorm2d(nChannels[3])
         self.linear = nn.Linear(nChannels[3], num_classes)
         self.nChannels = nChannels[3]
@@ -89,9 +89,9 @@ class WideResNet(nn.Module):
         self.conv1.weight.data = torch.mul(self.conv1.weight,  self.mask1.weight)
 
         out = self.conv1(x)
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
+        out = self.block1(out)
+        out = self.block2(out)
+        out = self.block3(out)
         out = F.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
         out = out.view(-1, self.nChannels)
@@ -101,7 +101,7 @@ class WideResNet(nn.Module):
     def __prune__(self, threshold):
         self.mode = 'prune'
         self.mask1.weight.data = torch.mul(torch.gt(torch.abs(self.conv1.weight), threshold).float(), self.mask1.weight)
-        layers = [self.layer1, self.layer2, self.layer3]
+        layers = [self.block1, self.block2, self.block3]
         for layer in layers:
             for sub_block in layer:
                 sub_block.__prune__(threshold)
