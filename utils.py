@@ -54,7 +54,7 @@ def get_cifar_loaders(data_loc='./disk/scratch/datasets/cifar10/', batch_size=12
 def load_model(model, sd, old_format=False):
     sd = torch.load('checkpoints/%s.t7' % sd, map_location='cpu')
     new_sd = model.state_dict()
-    old_sd = sd['net']
+    old_sd = sd['state_dict']
 
     if old_format:
         # this means the sd we are trying to load does not have masks
@@ -69,7 +69,17 @@ def load_model(model, sd, old_format=False):
             if not 'mask' in j:
                 new_sd[j] = old_sd[old_names[i]]
 
-    model.load_state_dict(new_sd)
+    try:
+        model.load_state_dict(new_sd)
+    except:
+        new_sd = model.state_dict()
+        old_sd = sd['state_dict']
+        k_new = [k for k in new_sd.keys() if 'mask' not in k]
+        k_new = [k for k in k_new if 'num_batches_tracked' not in k]
+        for o, n in zip(old_sd.keys(), k_new):
+            new_sd[n] = old_sd[o]
+
+        model.load_state_dict(new_sd)
     return model, sd
 
 def get_error(output, target, topk=(1,)):
