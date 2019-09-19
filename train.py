@@ -62,5 +62,5 @@ criterion = nn.CrossEntropyLoss()
 error_history = []
 for epoch in tqdm(range(args.epochs)):
     train(model, trainloader, criterion, optimizer)
-    validate(model, epoch, testloader, criterion, checkpoint=args.checkpoint)
+    validate(model, epoch, testloader, criterion, checkpoint=args.checkpoint if epoch != 2 else args.checkpoint+'_init')
     scheduler.step()
