@@ -2,8 +2,6 @@
 
 A PyTorch implementation of [this paper](https://arxiv.org/abs/1506.02626).
 
-I'm currently in the process of updating this to work with the latest version of PyTorch! Currently the only network type that works is ResNet - other networks coming soon. 
-
 To run, try:
 ```bash
 python train.py --model='resnet34' --checkpoint='resnet34'
