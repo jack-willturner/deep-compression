@@ -42,7 +42,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
     os.environ["CUDA_VISIBLE_DEVICES"] = args.GPU
 
-global error_history
 error_history = []
 
 models = {

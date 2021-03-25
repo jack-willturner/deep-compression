@@ -40,7 +40,6 @@ if torch.cuda.is_available():
     os.environ["CUDA_VISIBLE_DEVICES"] = args.GPU
 
 epoch_step = json.loads(args.epoch_step)
-global error_history
 
 models = {
     "resnet9": ResNet9(),

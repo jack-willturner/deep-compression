@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+__all__ = ["WideResNet"]
+
 
 class Shortcut(nn.Module):
     def __init__(

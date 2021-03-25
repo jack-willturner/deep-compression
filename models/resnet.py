@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+_all__ = ["ResNet9", "ResNet18", "ResNet34", "ResNet50", "ResNet101", "ResNet152"]
+
 
 class Shortcut(nn.Module):
     def __init__(
