@@ -3,11 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 
-import torchvision
-import torchvision.transforms as transforms
-
 import os
-import json
 import argparse
 from models import *
 from utils import *

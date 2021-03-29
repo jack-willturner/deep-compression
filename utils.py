@@ -7,7 +7,6 @@ import torchvision.transforms as transforms
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-global error_history
 error_history = []
 
 
@@ -37,7 +36,6 @@ def get_cifar_loaders(
     n_holes=1,
     length=16,
 ):
-    num_classes = 10
     transform_train = transforms.Compose(
         [
             transforms.RandomCrop(32, padding=4),
@@ -96,7 +94,7 @@ def load_model(model, sd, old_format=False):
 
     try:
         model.load_state_dict(new_sd)
-    except:
+    except Exception as e:
         new_sd = model.state_dict()
         old_sd = sd["state_dict"]
         k_new = [k for k in new_sd.keys() if "mask" not in k]
@@ -136,8 +134,6 @@ def get_no_params(net, verbose=False, mask=False):
 
 
 def train(model, trainloader, criterion, optimizer):
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
@@ -166,9 +162,6 @@ def train(model, trainloader, criterion, optimizer):
 
 def validate(model, epoch, valloader, criterion, checkpoint=None):
     global error_history
-
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
 
     losses = AverageMeter()
     top1 = AverageMeter()
