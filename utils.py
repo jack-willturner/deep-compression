@@ -240,7 +240,7 @@ def sparsify(model, prune_rate=50.0):
     threshold = calculate_threshold(model, prune_rate)
     try:
         model.__prune__(threshold)
-    except:
+    except Exception as e:
         model.module.__prune__(threshold)
     return model
 
