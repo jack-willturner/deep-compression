@@ -2,6 +2,7 @@
 
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/jack-willturner/DeepCompression-PyTorch.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/jack-willturner/DeepCompression-PyTorch/alerts/) 
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/jack-willturner/DeepCompression-PyTorch.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/jack-willturner/DeepCompression-PyTorch/context:python)
+![GitHub](https://img.shields.io/github/license/jack-willturner/DeepCompression-PyTorch)
 
 A PyTorch implementation of [this paper](https://arxiv.org/abs/1506.02626).
 
