@@ -17,11 +17,11 @@ nvidia-smi
 
 for seed in 3
 do
-    python train.py --model='resnet18' --checkpoint='resnet18' --seed=$seed 
-    python train.py --model='resnet34' --checkpoint='resnet34' --seed=$seed
-    python train.py --model='resnet50' --checkpoint='resnet50' --seed=$seed
+    python train.py --model='resnet18' --seed=$seed 
+    python train.py --model='resnet34' --seed=$seed
+    python train.py --model='resnet50' --seed=$seed
 
-    python train.py --model='wrn_40_2' --checkpoint='wrn_40_2' --seed=$seed
-    python train.py --model='wrn_16_2' --checkpoint='wrn_16_2' --seed=$seed
-    python train.py --model='wrn_40_1' --checkpoint='wrn_40_1' --seed=$seed
+    python train.py --model='wrn_40_2' --seed=$seed
+    python train.py --model='wrn_16_2' --seed=$seed
+    python train.py --model='wrn_40_1' --seed=$seed
 done

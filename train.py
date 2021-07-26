@@ -24,7 +24,7 @@ parser.add_argument(
     "--model", default="resnet18", help="resnet9/18/34/50, wrn_40_2/_16_2/_40_1"
 )
 parser.add_argument("--data_loc", default="/disk/scratch/datasets/cifar", type=str)
-parser.add_argument("--checkpoint", default="resnet18", type=str)
+parser.add_argument("--checkpoint", default=None, type=str)
 parser.add_argument("--GPU", default="0", type=str, help="GPU to use")
 
 ### training specific args
@@ -63,6 +63,9 @@ if torch.cuda.is_available():
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 model.to(device)
+
+if args.checkpoint is None:
+    args.checkpoint = args.model
 
 ################################################################## TRAINING HYPERPARAMETERS
 
