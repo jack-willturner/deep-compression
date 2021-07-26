@@ -3,11 +3,12 @@
 #SBATCH --requeue
 #SBATCH --output=logs/baselines.out
 #SBATCH --job-name=baselines
-#SBATCH --gres=pu:1
-#SBATCH --mem=14000
+#SBATCH --gres=gpu:3
+#SBATCH --mem=42000
 #SBATCH --time=10000
 
 export PATH="$HOME/miniconda/bin:$PATH"
+export DATA_LOC = "../datasets/cifar10"
 
 cd ..
 
@@ -17,11 +18,11 @@ nvidia-smi
 
 for seed in 3
 do
-    python train.py --model='resnet18' --seed=$seed 
-    python train.py --model='resnet34' --seed=$seed
-    python train.py --model='resnet50' --seed=$seed
+    python train.py --model='resnet18' --data_loc=$DATA_LOC --seed=$seed --n_gpus=1 &
+    python train.py --model='resnet34' --data_loc=$DATA_LOC --seed=$seed --n_gpus=1 &
+    python train.py --model='resnet50' --data_loc=$DATA_LOC --seed=$seed --n_gpus=1
 
-    python train.py --model='wrn_40_2' --seed=$seed
-    python train.py --model='wrn_16_2' --seed=$seed
-    python train.py --model='wrn_40_1' --seed=$seed
+    python train.py --model='wrn_40_2' --data_loc=$DATA_LOC --seed=$seed --n_gpus=1 &
+    python train.py --model='wrn_16_2' --data_loc=$DATA_LOC --seed=$seed --n_gpus=1 &
+    python train.py --model='wrn_40_1' --data_loc=$DATA_LOC --seed=$seed --n_gpus=1
 done
