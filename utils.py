@@ -1,10 +1,25 @@
 from __future__ import print_function
 
 import torch
-import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 import numpy as np
+
+import os
+import GPUtil
+
+__all__ = [
+    "AverageMeter",
+    "get_cifar_loaders",
+    "load_model",
+    "get_error",
+    "get_no_params",
+    "train",
+    "validate",
+    "finetune",
+    "Cutout",
+    "select_devices",
+]
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 error_history = []
@@ -71,38 +86,23 @@ def get_cifar_loaders(
     return trainloader, testloader
 
 
-def load_model(model, sd, old_format=False):
+def load_model(model, sd):
     sd = torch.load("checkpoints/%s.t7" % sd, map_location="cpu")
+
     new_sd = model.state_dict()
     if "state_dict" in sd.keys():
         old_sd = sd["state_dict"]
     else:
         old_sd = sd["net"]
 
-    if old_format:
-        # this means the sd we are trying to load does not have masks
-        # and/or is named incorrectly
-        keys_without_masks = [k for k in new_sd.keys() if "mask" not in k]
-        for old_k, new_k in zip(old_sd.keys(), keys_without_masks):
-            new_sd[new_k] = old_sd[old_k]
-    else:
-        new_names = [v for v in new_sd]
-        old_names = [v for v in old_sd]
-        for i, j in enumerate(new_names):
-            if not "mask" in j:
-                new_sd[j] = old_sd[old_names[i]]
+    new_names = [v for v in new_sd]
+    old_names = [v for v in old_sd]
+    for i, j in enumerate(new_names):
+        if not "mask" in j:
+            new_sd[j] = old_sd[old_names[i]]
 
-    try:
-        model.load_state_dict(new_sd)
-    except Exception as e:
-        new_sd = model.state_dict()
-        old_sd = sd["state_dict"]
-        k_new = [k for k in new_sd.keys() if "mask" not in k]
-        k_new = [k for k in k_new if "num_batches_tracked" not in k]
-        for o, n in zip(old_sd.keys(), k_new):
-            new_sd[n] = old_sd[o]
+    model.load_state_dict(new_sd)
 
-        model.load_state_dict(new_sd)
     return model, sd
 
 
@@ -160,7 +160,7 @@ def train(model, trainloader, criterion, optimizer):
         optimizer.step()
 
 
-def validate(model, epoch, valloader, criterion, checkpoint=None):
+def validate(model, epoch, valloader, criterion, checkpoint=None, seed=None):
     global error_history
 
     losses = AverageMeter()
@@ -170,9 +170,9 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
     # switch to evaluate mode
     model.eval()
 
-    for i, (input, target) in enumerate(valloader):
+    for _, (input, target) in enumerate(valloader):
         input, target = input.to(device), target.to(device)
-        # compute output
+
         output = model(input)
         loss = criterion(output, target)
         err1, err5 = get_error(output.detach(), target, topk=(1, 5))
@@ -190,7 +190,7 @@ def validate(model, epoch, valloader, criterion, checkpoint=None):
             "epoch": epoch,
             "error_history": error_history,
         }
-        torch.save(state, "checkpoints/%s.t7" % checkpoint)
+        torch.save(state, f"checkpoints/{checkpoint}_{seed}.t7")
 
 
 def finetune(model, trainloader, criterion, optimizer, steps=100):
@@ -214,35 +214,6 @@ def finetune(model, trainloader, criterion, optimizer, steps=100):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
-
-def expand_model(model, layers=torch.Tensor()):
-    for layer in model.children():
-        if len(list(layer.children())) > 0:
-            layers = expand_model(layer, layers)
-        else:
-            if isinstance(layer, nn.Conv2d) and "mask" not in layer._get_name():
-                layers = torch.cat((layers.view(-1), layer.weight.view(-1)))
-    return layers
-
-
-def calculate_threshold(model, rate):
-    empty = torch.Tensor()
-    if torch.cuda.is_available():
-        empty = empty.cuda()
-    pre_abs = expand_model(model, empty)
-    weights = torch.abs(pre_abs)
-
-    return np.percentile(weights.detach().cpu().numpy(), rate)
-
-
-def sparsify(model, prune_rate=50.0):
-    threshold = calculate_threshold(model, prune_rate)
-    try:
-        model.__prune__(threshold)
-    except:
-        model.module.__prune__(threshold)
-    return model
 
 
 class Cutout(object):
@@ -284,3 +255,34 @@ class Cutout(object):
         img = img * mask
 
         return img
+
+
+# explicit by pass of the below
+def select_devices(
+    num_gpus_to_use=0, max_load=0.01, max_memory=0.01, exclude_gpu_ids=None
+):
+
+    if num_gpus_to_use == 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    else:
+        gpu_to_use = GPUtil.getAvailable(
+            order="first",
+            limit=num_gpus_to_use,
+            maxLoad=max_load,
+            maxMemory=max_memory,
+            includeNan=False,
+            excludeID=exclude_gpu_ids,
+            excludeUUID=[],
+        )
+        if len(gpu_to_use) < num_gpus_to_use:
+            raise OSError(
+                "Couldnt find enough GPU(s) as required by the user, stopping program "
+                "- consider reducing "
+                "the requirements or using num_gpus_to_use=0 to use CPU"
+            )
+
+        os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(
+            str(gpu_idx) for gpu_idx in gpu_to_use
+        )
+
+        print("GPUs selected have IDs {}".format(os.environ["CUDA_VISIBLE_DEVICES"]))

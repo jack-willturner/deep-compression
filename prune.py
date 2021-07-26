@@ -6,11 +6,18 @@ import torch.optim.lr_scheduler as lr_scheduler
 import os
 import argparse
 from models import *
+from pruners import get_pruner
 from utils import *
 from tqdm import tqdm
 
-parser = argparse.ArgumentParser(description="PyTorch CIFAR10 Training")
-parser.add_argument("--model", default="resnet18", help="VGG-16, ResNet-18, LeNet")
+################################################################## ARGUMENT PARSING
+
+parser = argparse.ArgumentParser(description="PyTorch CIFAR10 pruning")
+parser.add_argument(
+    "--model",
+    default="resnet18",
+    help="resnet9, resnet18, resnet34, resnet50, wrn_40_2, wrn_16_2, wrn_40_1",
+)
 parser.add_argument("--data_loc", default="/disk/scratch/datasets/cifar", type=str)
 parser.add_argument(
     "--checkpoint", default="resnet18", type=str, help="Pretrained model to start from"
@@ -27,12 +34,21 @@ parser.add_argument(
 )
 parser.add_argument("--cutout", action="store_true")
 
-### training specific args
+### pruning specific args
+parser.add_argument("--pruner", default="L1Pruner", type="str")
+parser.add_argument(
+    "--prune_iters",
+    default=100,
+    help="how many times to repeat the prune->finetune process",
+)
 parser.add_argument("--finetune_steps", default=100)
 parser.add_argument("--lr", default=0.001)
 parser.add_argument("--weight_decay", default=0.0005, type=float)
 
 args = parser.parse_args()
+
+
+################################################################## MODEL LOADING
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
@@ -52,22 +68,24 @@ models = {
 
 model = models[args.model]
 
-old_format = False
-if "wrn" in args.model:
-    old_format = True
-
-model, sd = load_model(model, args.checkpoint, old_format)
+model, sd = load_model(model, args.checkpoint)
 
 if args.prune_checkpoint == "":
-    prune_checkpoint = args.checkpoint + "_l1_"
+    args.prune_checkpoint = args.checkpoint + "_l1_"
 else:
-    prune_checkpoint = args.prune_checkpoint
+    args.prune_checkpoint = args.prune_checkpoint
 
 if torch.cuda.is_available():
     model = model.cuda()
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 model.to(device)
+
+################################################################## PRUNER
+
+pruner = get_pruner(args.pruner)
+
+################################################################## TRAINING HYPERPARAMETERS
 
 trainloader, testloader = get_cifar_loaders(args.data_loc, cutout=args.cutout)
 optimizer = optim.SGD(
@@ -78,18 +96,21 @@ optimizer = optim.SGD(
 )
 criterion = nn.CrossEntropyLoss()
 
-# set the learning rate to be 1/8th of final LR
+# set the learning rate to be final LR
 scheduler = lr_scheduler.CosineAnnealingLR(optimizer, 200, eta_min=1e-10)
 for epoch in range(sd["epoch"]):
     scheduler.step()
 for group in optimizer.param_groups:
     group["lr"] = scheduler.get_lr()[0]
 
-for prune_rate in tqdm(range(100)):
-    model = sparsify(model, prune_rate)
+
+################################################################## ACTUAL PRUNING/FINETUNING
+
+for prune_rate in tqdm(range(args.prune_iters)):
+    model = pruner.prune(model, prune_rate)
 
     if prune_rate % args.save_every == 0:
-        checkpoint = prune_checkpoint + str(prune_rate)
+        checkpoint = args.prune_checkpoint + str(prune_rate)
     else:
         checkpoint = None  # don't bother saving anything
 

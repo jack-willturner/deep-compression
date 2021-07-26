@@ -10,9 +10,14 @@ import os
 import json
 import argparse
 
-from models import *
+import random
+import numpy as np
+
+from models import get_model
 from utils import *
 from tqdm import tqdm
+
+################################################################## ARGUMENT PARSING
 
 parser = argparse.ArgumentParser(description="PyTorch CIFAR10 Training")
 parser.add_argument(
@@ -20,7 +25,7 @@ parser.add_argument(
 )
 parser.add_argument("--data_loc", default="/disk/scratch/datasets/cifar", type=str)
 parser.add_argument("--checkpoint", default="resnet18", type=str)
-parser.add_argument("--GPU", default="0,1", type=str, help="GPU to use")
+parser.add_argument("--GPU", default="0", type=str, help="GPU to use")
 
 ### training specific args
 parser.add_argument("--epochs", default=200, type=int)
@@ -30,7 +35,20 @@ parser.add_argument(
 )
 parser.add_argument("--weight_decay", default=0.0005, type=float)
 
+### reproducibility
+parser.add_argument("--seed", default=1, type=int)
 args = parser.parse_args()
+
+
+################################################################## REPRODUCIBILITY
+
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+random.seed(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+
+################################################################## MODEL LOADING
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
@@ -38,23 +56,15 @@ if torch.cuda.is_available():
 
 epoch_step = json.loads(args.epoch_step)
 
-models = {
-    "resnet9": ResNet9(),
-    "resnet18": ResNet18(),
-    "resnet34": ResNet34(),
-    "resnet50": ResNet50(),
-    "wrn_40_2": WideResNet(40, 2),
-    "wrn_16_2": WideResNet(16, 2),
-    "wrn_40_1": WideResNet(40, 1),
-}
-
-model = models[args.model]
+model = get_model(args.model)
 
 if torch.cuda.is_available():
     model = model.cuda()
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 model.to(device)
+
+################################################################## TRAINING HYPERPARAMETERS
 
 trainloader, testloader = get_cifar_loaders(args.data_loc)
 optimizer = optim.SGD(
@@ -66,6 +76,8 @@ optimizer = optim.SGD(
 scheduler = lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=1e-10)
 criterion = nn.CrossEntropyLoss()
 
+################################################################## ACTUAL TRAINING
+
 error_history = []
 for epoch in tqdm(range(args.epochs)):
     train(model, trainloader, criterion, optimizer)
@@ -75,5 +87,6 @@ for epoch in tqdm(range(args.epochs)):
         testloader,
         criterion,
         checkpoint=args.checkpoint if epoch != 2 else args.checkpoint + "_init",
+        seed=args.seed,
     )
     scheduler.step()
