@@ -140,4 +140,4 @@ cython_debug/
 # mac os
 
 .DS_Store
-checkpoints/
+checkpoints/*.t7
