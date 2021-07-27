@@ -25,7 +25,7 @@ parser.add_argument(
 )
 parser.add_argument("--data_loc", default="/disk/scratch/datasets/cifar", type=str)
 parser.add_argument("--checkpoint", default=None, type=str)
-parser.add_argument("--GPU", default="0", type=str, help="GPU to use")
+parser.add_argument("--n_gpus", default=0, type=int, help="Number of GPUs to use")
 
 ### training specific args
 parser.add_argument("--epochs", default=200, type=int)
@@ -39,6 +39,7 @@ parser.add_argument("--weight_decay", default=0.0005, type=float)
 parser.add_argument("--seed", default=1, type=int)
 args = parser.parse_args()
 
+print(args.data_loc)
 
 ################################################################## REPRODUCIBILITY
 
@@ -51,10 +52,9 @@ torch.manual_seed(args.seed)
 ################################################################## MODEL LOADING
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-if torch.cuda.is_available():
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.GPU
 
-epoch_step = json.loads(args.epoch_step)
+if torch.cuda.is_available():
+    select_devices(num_gpus_to_use=args.n_gpus)
 
 model = get_model(args.model)
 

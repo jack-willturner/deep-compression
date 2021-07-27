@@ -265,6 +265,8 @@ def select_devices(
     if num_gpus_to_use == 0:
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
     else:
+        if exclude_gpu_ids is None:
+            exclude_gpu_ids = []
         gpu_to_use = GPUtil.getAvailable(
             order="first",
             limit=num_gpus_to_use,
