@@ -1,0 +1,34 @@
+/home/s1788120/miniconda/envs/bertie/lib/python3.7/site-packages/torch/cuda/__init__.py:125: UserWarning: 
+GeForce RTX 3090 with CUDA capability sm_86 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_37 sm_50 sm_60 sm_61 sm_70 sm_75 compute_37.
+If you want to use the GeForce RTX 3090 GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(incompatible_device_warn.format(device_name, capability, " ".join(arch_list), device_name))
++----+--------------------+---------+----------------+
+|    | Filename           |   Epoch |   Latest Error |
+|----+--------------------+---------+----------------|
+|  0 | resnet18_init_3.t7 |       2 |          48.64 |
+|  1 | wrn_40_1_1.t7      |     199 |           5.29 |
+|  2 | resnet18_1.t7      |     199 |           3.54 |
+|  3 | wrn_40_1_init_3.t7 |       2 |          41.34 |
+|  4 | wrn_16_2_init_3.t7 |       2 |          39.38 |
+|  5 | resnet18_init_1.t7 |       2 |          46.43 |
+|  6 | resnet34_init_3.t7 |       2 |          55.7  |
+|  7 | resnet50_1.t7      |     199 |           3.63 |
+|  8 | resnet50_3.t7      |     199 |           3.89 |
+|  9 | resnet34_3.t7      |     199 |           3.47 |
+| 10 | resnet18_3.t7      |     199 |           3.69 |
+| 11 | wrn_40_1_3.t7      |     199 |           5.7  |
+| 12 | wrn_40_2_3.t7      |     194 |           4.03 |
+| 13 | wrn_40_2_init_3.t7 |       2 |          39.5  |
+| 14 | resnet50_init_1.t7 |       2 |          59.49 |
+| 15 | resnet34_1.t7      |     199 |           3.27 |
+| 16 | wrn_16_2_1.t7      |     199 |           5.28 |
+| 17 | resnet34_init_1.t7 |       2 |          62.79 |
+| 18 | resnet50_init_3.t7 |       2 |          63.46 |
+| 19 | wrn_40_1_init_1.t7 |       2 |          37.89 |
+| 20 | wrn_16_2_3.t7      |     199 |           4.95 |
+| 21 | wrn_40_2_init_1.t7 |       2 |          37.61 |
+| 22 | wrn_16_2_init_1.t7 |       2 |          34.72 |
+| 23 | wrn_40_2_1.t7      |     195 |           3.89 |
++----+--------------------+---------+----------------+

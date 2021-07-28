@@ -1,8 +1,8 @@
 #!/bin/sh
 #SBATCH --nodes=1
 #SBATCH --requeue
-#SBATCH --output=logs/baselines1.out
-#SBATCH --job-name=baselines1
+#SBATCH --output=logs/baselines.out
+#SBATCH --job-name=baselines
 #SBATCH --gres=gpu:3
 #SBATCH --mem=42000
 #SBATCH --time=10000
@@ -15,8 +15,8 @@ cd ..
 source activate bertie
 echo 'bertie activated'
 nvidia-smi
-pip install GPUtil
-for seed in 1 2 
+
+for seed in 1 2 3
 do
     python train.py --model='resnet18' --data_loc="../datasets/cifar10" --seed=$seed --n_gpus=1 &
     python train.py --model='resnet34' --data_loc="../datasets/cifar10" --seed=$seed --n_gpus=1 &
