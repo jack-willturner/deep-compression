@@ -1,6 +1,9 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from torch import Tensor
+
+from .conv_bn_relu import ConvBNReLU
 
 __all__ = ["WideResNet"]
 
@@ -18,31 +21,17 @@ class Shortcut(nn.Module):
     ):
         super(Shortcut, self).__init__()
         self.mode = mode
-        self.conv1 = nn.Conv2d(
+        self.conv_bn = ConvBNReLU(
             in_planes,
             expansion * planes,
             kernel_size=kernel_size,
             stride=stride,
             bias=False,
+            relu=False,
         )
-        self.mask1 = nn.Conv2d(
-            in_planes,
-            expansion * planes,
-            kernel_size=kernel_size,
-            stride=stride,
-            bias=False,
-        )
-        self.mask1.weight.data = torch.ones(self.mask1.weight.size())
 
-    def forward(self, x):
-        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1.weight)
-        return self.conv1(x)
-
-    def __prune__(self, threshold):
-        self.mode = "prune"
-        self.mask1.weight.data = torch.mul(
-            torch.gt(torch.abs(self.conv1.weight), threshold).float(), self.mask1.weight
-        )
+    def forward(self, x: Tensor) -> Tensor:
+        return self.conv_bn(x)
 
 
 class BasicBlock(nn.Module):
@@ -51,29 +40,25 @@ class BasicBlock(nn.Module):
     def __init__(self, in_planes, planes, stride=1, mode="train"):
         super(BasicBlock, self).__init__()
         self.mode = mode
-        self.bn1 = nn.BatchNorm2d(in_planes)
-        self.conv1 = nn.Conv2d(
-            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
-        )
-        self.mask1 = nn.Conv2d(
-            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
-        )
-        self.mask1.weight.data = torch.ones(self.mask1.weight.size())
 
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(
-            planes, planes, kernel_size=3, stride=1, padding=1, bias=False
+        self.conv1 = ConvBNReLU(
+            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
         )
-        self.mask2 = nn.Conv2d(
-            planes, planes, kernel_size=3, stride=1, padding=1, bias=False
+
+        self.conv2 = ConvBNReLU(
+            planes,
+            planes,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            bias=False,
+            relu=False,
         )
-        self.mask2.weight.data = torch.ones(self.mask2.weight.size())
+
         self.shortcut = nn.Sequential()
 
-        self.equalInOut = in_planes == planes
-        self.shortcut = (
-            (not self.equalInOut)
-            and Shortcut(
+        if in_planes != self.expansion * planes:
+            self.shortcut = Shortcut(
                 in_planes,
                 planes,
                 self.expansion,
@@ -81,32 +66,24 @@ class BasicBlock(nn.Module):
                 stride=stride,
                 bias=False,
             )
-            or None
-        )
 
-    def forward(self, x):
-        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1.weight)
-        self.conv2.weight.data = torch.mul(self.conv2.weight, self.mask2.weight)
+    def forward(self, x: Tensor) -> Tensor:
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
 
-        if not self.equalInOut:
-            x = F.relu(self.bn1(x))
+    def get_prunable_layers(self, pruning_type="unstructured"):
+
+        if pruning_type == "unstructured":
+            return [self.conv1, self.conv2, self.shortcut.conv_bn]
+
+        elif pruning_type == "structured":
+            return [self.conv1]
+
         else:
-            out = F.relu(self.bn1(x))
-
-        out = self.conv2(F.relu(self.bn2(self.conv1(out if self.equalInOut else x))))
-        return torch.add(x if self.equalInOut else self.shortcut(x), out)
-
-    def __prune__(self, threshold):
-        self.mode = "prune"
-        self.mask1.weight.data = torch.mul(
-            torch.gt(torch.abs(self.conv1.weight), threshold).float(), self.mask1.weight
-        )
-        self.mask2.weight.data = torch.mul(
-            torch.gt(torch.abs(self.conv2.weight), threshold).float(), self.mask2.weight
-        )
-
-        if isinstance(self.shortcut, Shortcut):
-            self.shortcut.__prune__(threshold)
+            raise ValueError("Invalid type of pruning")
 
 
 class WideResNet(nn.Module):
@@ -119,13 +96,10 @@ class WideResNet(nn.Module):
         assert (depth - 4) % 6 == 0
         n = (depth - 4) / 6
 
-        self.conv1 = nn.Conv2d(
+        self.conv_bn_relu = ConvBNReLU(
             3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False
         )
-        self.mask1 = nn.Conv2d(
-            3, nChannels[0], kernel_size=3, stride=1, padding=1, bias=False
-        )
-        self.mask1.weight.data = torch.ones(self.mask1.weight.size())
+
         self.block1 = self._make_layer(n, nChannels[0], nChannels[1], stride=1)
         self.block2 = self._make_layer(n, nChannels[1], nChannels[2], stride=2)
         self.block3 = self._make_layer(n, nChannels[2], nChannels[3], stride=2)
@@ -145,25 +119,39 @@ class WideResNet(nn.Module):
             )
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        self.conv1.weight.data = torch.mul(self.conv1.weight, self.mask1.weight)
+    def forward(self, x: Tensor) -> Tensor:
+        out = self.conv_bn_relu(x)
+        self.activations = []
 
-        out = self.conv1(x)
-        out = self.block1(out)
-        out = self.block2(out)
-        out = self.block3(out)
+        for layer in self.block1:
+            out = layer(out)
+            self.activations.append(out)
+
+        for layer in self.block2:
+            out = layer(out)
+            self.activations.append(out)
+
+        for layer in self.block3:
+            out = layer(out)
+            self.activations.append(out)
+
         out = F.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
+
         out = out.view(-1, self.nChannels)
+
         out = self.linear(out)
         return out
 
-    def __prune__(self, threshold):
-        self.mode = "prune"
-        self.mask1.weight.data = torch.mul(
-            torch.gt(torch.abs(self.conv1.weight), threshold).float(), self.mask1.weight
-        )
-        layers = [self.block1, self.block2, self.block3]
-        for layer in layers:
-            for sub_block in layer:
-                sub_block.__prune__(threshold)
+    def get_prunable_layers(self, pruning_type="unstructured"):
+        convs = []
+
+        if pruning_type == "unstructured":
+            convs.append(self.conv_bn_relu)
+
+        for block in [self.block1, self.block2, self.block3]:
+            for layer in block:
+                for conv in layer.get_prunable_layers(pruning_type):
+                    convs.append(conv)
+
+        return convs

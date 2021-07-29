@@ -8,6 +8,8 @@ import numpy as np
 import os
 import GPUtil
 
+from enum import Enum
+
 __all__ = [
     "AverageMeter",
     "get_cifar_loaders",

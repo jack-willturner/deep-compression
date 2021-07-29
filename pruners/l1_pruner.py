@@ -3,33 +3,63 @@ import torch.nn as nn
 import numpy as np
 
 
-def expand_model(model, layers=torch.Tensor()):
-    for layer in model.children():
-        if len(list(layer.children())) > 0:
-            layers = expand_model(layer, layers)
-        else:
-            if isinstance(layer, nn.Conv2d) and "mask" not in layer._get_name():
-                layers = torch.cat((layers.view(-1), layer.weight.view(-1)))
-    return layers
-
-
 class L1Pruner:
-    def calculate_threshold(self, model, rate):
-        empty = torch.Tensor()
+    def __init__(self, pruning_type="unstructured"):
+        self.pruning_type = pruning_type
+
+    def structured_prune(self, model, prune_rate):
+
+        # get all the prunable convolutions
+        convs = model.get_prunable_convs(pruning_type=self.pruning_type)
+
+        # figure out the threshold of l1-norm under which channels should be turned off
+        channel_norms = []
+        for conv in convs:
+            channel_norms.append(
+                torch.sum(
+                    torch.abs(conv.conv.weight.view(conv.conv.out_channels, -1)), axis=1
+                )
+            )
+
+        threshold = np.percentile(channel_norms, prune_rate)
+
+        # prune anything beneath the l1-threshold
+        for conv in convs:
+            channel_norms = torch.sum(
+                torch.abs(conv.conv.weight.view(conv.conv.out_channels, -1)), axis=1
+            )
+            mask = conv.mask * (channel_norms < threshold)
+            conv.mask = torch.einsum("cijk,c->cijk", conv.weight.data, mask)
+
+    def unstructured_prune(self, model, prune_rate=50.0):
+
+        # get all the prunable convolutions
+        convs = model.get_prunable_convs(pruning_type=self.pruning_type)
+
+        # collate all weights into a single vector so l1-threshold can be calculated
+        all_weights = torch.Tensor()
         if torch.cuda.is_available():
-            empty = empty.cuda()
-        pre_abs = expand_model(model, empty)
-        weights = torch.abs(pre_abs)
+            all_weights = all_weights.cuda()
+        for conv in convs:
+            all_weights = torch.cat((all_weights.view(-1)), conv.conv.weight.view(-1))
+        abs_weights = torch.abs(all_weights.detach())
 
-        return np.percentile(weights.detach().cpu().numpy(), rate)
+        threshold = np.percentile(abs_weights, prune_rate)
 
-    def sparsify(self, model, prune_rate=50.0):
-        threshold = self.calculate_threshold(model, prune_rate)
-        try:
-            model.__prune__(threshold)
-        except:
-            model.module.__prune__(threshold)
-        return model
+        # prune anything beneath l1-threshold
+        for conv in model.get_prunable_convs(pruning_type=self.pruning_type):
+            conv.mask = torch.mul(
+                torch.gt(torch.abs(conv.conv.weight), threshold).float(),
+                conv.mask.weight,
+            )
 
     def prune(self, model, prune_rate):
-        self.sparsify(model, prune_rate)
+
+        if self.pruning_type == "unstructured":
+            self.unstructured_prune(model, prune_rate)
+
+        elif self.pruning_type == "structured":
+            self.structured_prune(model, prune_rate)
+
+        else:
+            raise ValueError("Invalid type of pruning")

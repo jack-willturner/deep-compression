@@ -12,6 +12,11 @@ python train.py --model='resnet34' --checkpoint='resnet34'
 python prune.py --model='resnet34' --checkpoint='resnet34'
 ```
 
+## Bring your own models 
+In order to add a new model family to the repository you basically just need to do two things:
+1. Swap out the convolutional layers to use the `ConvBNReLU` class
+2. Define a `get_prunable_layers` method which returns all the instances of `ConvBNReLU` which you want to be prunable
+
 ## Summary
 
 Given a family of ResNets, we can construct a Pareto frontier of the tradeoff between accuracy and number of parameters:

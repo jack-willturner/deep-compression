@@ -6,7 +6,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 import os
 import argparse
 import random
-import numpy as np 
+import numpy as np
 
 from models import get_model
 from pruners import get_pruner
@@ -42,11 +42,22 @@ parser.add_argument("--cutout", action="store_true")
 ### pruning specific args
 parser.add_argument("--pruner", default="L1Pruner", type=str)
 parser.add_argument(
+    "--pruning_type",
+    default="unstructured",
+    type=str,
+    help="structured or unstructured",
+)
+parser.add_argument(
     "--prune_iters",
     default=100,
     help="how many times to repeat the prune->finetune process",
 )
-parser.add_argument("--target_prune_rate", default=99, type=int, help="Percentage of parameters to prune")
+parser.add_argument(
+    "--target_prune_rate",
+    default=99,
+    type=int,
+    help="Percentage of parameters to prune",
+)
 parser.add_argument("--finetune_steps", default=100)
 parser.add_argument("--lr", default=0.001)
 parser.add_argument("--weight_decay", default=0.0005, type=float)
@@ -90,7 +101,7 @@ model.to(device)
 
 ################################################################## PRUNER
 
-pruner = get_pruner(args.pruner)
+pruner = get_pruner(args.pruner, args.pruning_type)
 
 ################################################################## TRAINING HYPERPARAMETERS
 
