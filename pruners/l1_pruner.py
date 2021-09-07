@@ -48,10 +48,10 @@ class L1Pruner:
 
         # prune anything beneath l1-threshold
         for conv in model.get_prunable_layers(pruning_type=self.pruning_type):
-            conv.mask = torch.mul(
+            conv.mask.update(torch.mul(
                 torch.gt(torch.abs(conv.conv.weight), threshold).float(),
                 conv.mask.mask.weight,
-            )
+            ))
 
     def prune(self, model, prune_rate):
 

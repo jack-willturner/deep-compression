@@ -69,6 +69,8 @@ def test_simple_prune():
 
     prune_rate = 50
 
-    pruner.prune(model, prune_rate)
+    for prune_rate in [10, 40, 60, 80]:
+
+        pruner.prune(model, prune_rate)
 
 

@@ -14,6 +14,9 @@ class UnstructuredMask:
         )
         self.mask.weight.data = torch.ones(self.mask.weight.size())
 
+    def update(self, new_mask):
+        self.mask.weight.data  = new_mask
+
     def apply(self, conv, bn=None):
         conv.weight.data = torch.mul(conv.weight, self.mask.weight)
 

@@ -196,7 +196,6 @@ class ResNet(nn.Module):
 
         for stage in [self.layer1, self.layer2, self.layer3, self.layer4]:
             for layer in stage:
-                print(type(layer))
                 for conv in layer.get_prunable_layers(pruning_type):
                     convs.append(conv)
 
