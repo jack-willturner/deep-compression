@@ -1,6 +1,6 @@
 import torch
 from models import get_model
-
+from pruners import get_pruner
 
 def test_conv_bn_relu():
     from models.conv_bn_relu import ConvBNReLU
@@ -54,3 +54,21 @@ def test_simple_inf():
     y = model(data)
 
     assert y.size() == (1, 10)
+
+def test_get_prunable_convs():
+
+    model = get_model("resnet18")
+    model.get_prunable_layers()
+
+def test_simple_prune():
+    model = get_model("resnet18")
+    data = torch.rand((1,3,32,32))
+    y = model(data)
+
+    pruner = get_pruner("L1Pruner", "unstructured")
+
+    prune_rate = 50
+
+    pruner.prune(model, prune_rate)
+
+

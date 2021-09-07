@@ -52,7 +52,7 @@ class BasicBlock(nn.Module):
             planes, planes, kernel_size=3, stride=1, padding=1, bias=False, relu=False
         )
 
-        self.shortcut = nn.Sequential()
+        self.shortcut = nn.Identity()
 
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = Shortcut(
@@ -73,7 +73,10 @@ class BasicBlock(nn.Module):
 
     def get_prunable_layers(self, pruning_type="unstructured"):
         if pruning_type == "unstructured":
-            return [self.conv1, self.conv2, self.shortcut.conv_bn]
+            if isinstance(self.shortcut, nn.Identity):
+                return [self.conv1, self.conv2]
+            else:
+                return [self.conv1, self.conv2, self.shortcut.conv_bn]
 
         elif pruning_type == "structured":
             return [self.conv1]
@@ -193,6 +196,7 @@ class ResNet(nn.Module):
 
         for stage in [self.layer1, self.layer2, self.layer3, self.layer4]:
             for layer in stage:
+                print(type(layer))
                 for conv in layer.get_prunable_layers(pruning_type):
                     convs.append(conv)
 
