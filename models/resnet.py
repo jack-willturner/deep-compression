@@ -21,6 +21,7 @@ class Shortcut(nn.Module):
         expansion=1,
         kernel_size=1,
         stride=1,
+        padding=0,
         bias=False,
     ):
         super(Shortcut, self).__init__()
@@ -29,6 +30,7 @@ class Shortcut(nn.Module):
             expansion * planes,
             kernel_size=kernel_size,
             stride=stride,
+            padding=0,
             bias=False,
             relu=False,
         )
