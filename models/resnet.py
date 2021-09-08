@@ -94,16 +94,16 @@ class Bottleneck(nn.Module):
         # keep a log of most recent activations to do Fisher pruning
         self.activations = []
 
-        self.conv_bn_relu_1 = ConvBNReLU(in_planes, planes, kernel_size=1, bias=False)
+        self.conv_bn_relu_1 = ConvBNReLU(in_planes, planes, kernel_size=1, padding=0, bias=False)
         self.conv_bn_relu_2 = ConvBNReLU(
             planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
         )
 
         self.conv_bn = ConvBNReLU(
-            planes, self.expansion * planes, kernel_size=1, bias=False, relu=False
+            planes, self.expansion * planes, kernel_size=1, padding=0, bias=False, relu=False
         )
 
-        self.shortcut = nn.Sequential()
+        self.shortcut = nn.Identity()
 
         if stride != 1 or in_planes != self.expansion * planes:
             self.shortcut = Shortcut(
@@ -125,12 +125,19 @@ class Bottleneck(nn.Module):
 
     def get_prunable_layers(self, pruning_type="unstructured"):
         if pruning_type == "unstructured":
-            return [
-                self.conv_bn_relu_1,
-                self.conv_bn_relu_2,
-                self.conv_bn,
-                self.shortcut.conv_bn,
-            ]
+            if isinstance(self.shortcut, nn.Identity):
+                return [
+                        self.conv_bn_relu_1,
+                        self.conv_bn_relu_2,
+                        self.conv_bn,
+                ]
+            else:
+                return [
+                    self.conv_bn_relu_1,
+                    self.conv_bn_relu_2,
+                    self.conv_bn,
+                    self.shortcut.conv_bn,
+                ]
 
         elif pruning_type == "structured":
             return [self.conv_bn_relu_1, self.conv_bn_relu_2]

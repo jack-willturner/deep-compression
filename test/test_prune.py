@@ -2,10 +2,11 @@ import torch
 from models import get_model
 from pruners import get_pruner
 
+ALL_MODELS = ["resnet18","resnet34","resnet50", "wrn_40_2", "wrn_16_2", "wrn_40_1"]
 def test_conv_bn_relu():
     from models.conv_bn_relu import ConvBNReLU
 
-    for (Ci, Co) in [(16,16), (16,32), (32,16)]:
+    for (Ci, Co) in [(16, 16), (16, 32), (32, 16)]:
 
         convbnrelu = ConvBNReLU(Ci, Co, kernel_size=3)
 
@@ -47,30 +48,35 @@ def test_basic_block():
 
 
 def test_simple_inf():
-    model = get_model("resnet18")
 
-    data = torch.rand((1, 3, 32, 32))
+    for model in ALL_MODELS:
+        model = get_model("resnet18")
 
-    y = model(data)
+        data = torch.rand((1, 3, 32, 32))
 
-    assert y.size() == (1, 10)
+        y = model(data)
+
+        assert y.size() == (1, 10)
+
 
 def test_get_prunable_convs():
 
     model = get_model("resnet18")
     model.get_prunable_layers()
 
+
 def test_simple_prune():
-    model = get_model("resnet18")
-    data = torch.rand((1,3,32,32))
-    y = model(data)
 
-    pruner = get_pruner("L1Pruner", "unstructured")
+    for model in ALL_MODELS:
+        print(model)
+        model = get_model(model)
+        data = torch.rand((1, 3, 32, 32))
+        y = model(data)
 
-    prune_rate = 50
+        pruner = get_pruner("L1Pruner", "unstructured")
 
-    for prune_rate in [10, 40, 60, 80]:
+        prune_rate = 50
 
-        pruner.prune(model, prune_rate)
+        for prune_rate in [10, 40, 60, 80]:
 
-
+            pruner.prune(model, prune_rate)
