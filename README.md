@@ -5,7 +5,7 @@
 ![GitHub](https://img.shields.io/github/license/jack-willturner/DeepCompression-PyTorch)
 
 ------------------
-Difference from jack-willturner's 8 Sep 2021 version:
+Differences from jack-willturner's 8 Sep 2021 version:
 
 1. Add mobilenetV1/V2 unofficial model for pruning
 
