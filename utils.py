@@ -75,14 +75,14 @@ def get_cifar_loaders(
         root=data_loc, train=True, download=True, transform=transform_train
     )
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True, num_workers=2
+        trainset, batch_size=batch_size, shuffle=True, num_workers=0
     )
 
     testset = torchvision.datasets.CIFAR10(
         root=data_loc, train=False, download=True, transform=transform_test
     )
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=2
+        testset, batch_size=batch_size, shuffle=False, num_workers=0
     )
 
     return trainloader, testloader
@@ -113,14 +113,14 @@ def get_error(output, target, topk=(1,)):
     maxk = max(topk)
     batch_size = target.size(0)
 
-    _, pred = output.topk(maxk, 1, True, True)
+    _, pred = output.topk(maxk, 1, True, True) # top_k index for each batch. Shape:[batch_size,maxk]
     pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
+    correct = pred.eq(target.view(1, -1).expand_as(pred))# result for each top_k. Shape:[maxk,batch_size]
 
     res = []
     for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-        res.append(100.0 - correct_k.mul_(100.0 / batch_size))
+        correct_k = correct[:k].contiguous().view(-1).float().sum(0, keepdim=True) # top_k acc_num in 1 batch
+        res.append(100.0 - correct_k.mul_(100.0 / batch_size)) # error rate in %
     return res
 
 
@@ -162,7 +162,7 @@ def train(model, trainloader, criterion, optimizer):
         optimizer.step()
 
 
-def validate(model, epoch, valloader, criterion, checkpoint=None, seed=None):
+def validate(model, epoch, valloader, criterion, checkpoint=None, seed=None, is_train=False):
     global error_history
 
     losses = AverageMeter()
@@ -192,8 +192,13 @@ def validate(model, epoch, valloader, criterion, checkpoint=None, seed=None):
             "epoch": epoch,
             "error_history": error_history,
         }
+        
         torch.save(state, f"checkpoints/{checkpoint}_{seed}.t7")
-
+        
+        if is_train:
+            from matplotlib import pyplot as plt
+            plt.plot([i for i in range(epoch+1)],error_history)
+            plt.savefig("checkpoints/error_history.png")
 
 def finetune(model, trainloader, criterion, optimizer, steps=100):
     # switch to train mode

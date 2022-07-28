@@ -1,5 +1,7 @@
 from .resnet import *
 from .wideresnet import *
+from .mobilenetV1 import *
+from .mobilenetV2 import *
 
 __all__ = ["get_model"]
 
@@ -19,5 +21,9 @@ def get_model(model):
         return WideResNet(16, 2)
     elif model == "wrn_40_1":
         return WideResNet(40, 1)
+    elif model == "mobilenetV1":
+        return mobilenet1()
+    elif model == "mobilenetV2":
+        return mobilenet2()
     else:
         raise NotImplementedError
