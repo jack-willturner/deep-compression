@@ -6,6 +6,7 @@
 
 ------------------
 Difference from jack-willturner's 8 Sep 2021 version:
+
 1. Add mobilenetV1/V2 unofficial model for pruning
 
 2. Fix some bugs in structure type pruning.
@@ -13,6 +14,7 @@ Difference from jack-willturner's 8 Sep 2021 version:
 3. Now shows error history during training & nums of params after pruning by runing ".\checkpoints\print_results.py"
 
 Steps for structured pruning:
+
 1.Edit line62 in file "./models/conv_bn_relu.py" 
 ```python
 self.mask = UnstructuredMask(...)
