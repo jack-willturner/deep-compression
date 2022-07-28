@@ -13,19 +13,19 @@ Difference from jack-willturner's 8 Sep 2021 version:
 
 3. Now shows error history during training & nums of params after pruning by runing ".\checkpoints\print_results.py"
 
-Steps for structured pruning:
+Steps for changing pruning type:
 
 1.Edit line62 in file "./models/conv_bn_relu.py" 
 ```python
 self.mask = UnstructuredMask(...)
 ```
-to
+or
 ```python
 self.mask = structuredMask(...)
 ```
-2.Run:
+2.Specific pruning_type and run:
 ```
-bashpython prune.py --model='resnet34' --checkpoint='resnet34' --pruning_type structured
+python prune.py --model='resnet34' --checkpoint='resnet34' --pruning_type structured
 ```
 ------------------
 
